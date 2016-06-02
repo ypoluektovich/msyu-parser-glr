@@ -19,6 +19,7 @@ public class Example {
 		Terminal num = gb.addTerminal("num");
 		Terminal times = gb.addTerminal("*");
 		Terminal plus = gb.addTerminal("+");
+		Terminal eof = gb.addTerminal("eof");
 
 		NonTerminal value = gb.addNonTerminal("Value");
 		gb.addProduction(value, id);
@@ -33,7 +34,7 @@ public class Example {
 		gb.addProduction(sums, products);
 
 		NonTerminal goal = gb.addNonTerminal("Goal");
-		gb.addProduction(goal, sums);
+		gb.addProduction(goal, sums, eof);
 
 		Grammar grammar = gb.build();
 
@@ -45,6 +46,7 @@ public class Example {
 		state = state.advance(num);
 		state = state.advance(plus);
 		state = state.advance(num);
+		state = state.advance(eof);
 
 		Assert.assertTrue(state.completedGoals.contains(goal));
 	}
