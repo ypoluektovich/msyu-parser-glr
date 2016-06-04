@@ -14,7 +14,6 @@ import org.testng.annotations.Test;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class Example {
@@ -52,18 +51,12 @@ public class Example {
 
 		State state = State.initializeFrom(sapling, callback);
 		callback.completeIteration(state);
-		state = state.advance(id, callback);
-		callback.completeIteration(state);
-		state = state.advance(times, callback);
-		callback.completeIteration(state);
-		state = state.advance(num, callback);
-		callback.completeIteration(state);
-		state = state.advance(plus, callback);
-		callback.completeIteration(state);
-		state = state.advance(num, callback);
-		callback.completeIteration(state);
-		state = state.advance(eof, callback);
-		callback.completeIteration(state);
+		state = callback.advance(state, id);
+		state = callback.advance(state, times);
+		state = callback.advance(state, num);
+		state = callback.advance(state, plus);
+		state = callback.advance(state, num);
+		state = callback.advance(state, eof);
 	}
 
 	private static class MyCallback implements GlrCallback {
@@ -71,24 +64,35 @@ public class Example {
 		private int indexSource = 0;
 		private final Map<Object, Deque<ASymbol>> dequeByBranch = new HashMap<>();
 
+		private Terminal symbol;
+
+		State advance(State state, Terminal symbol) {
+			System.out.printf("iteration: %s\n", symbol);
+			this.symbol = symbol;
+			state = state.advance(symbol, this);
+			completeIteration(state);
+			this.symbol = null;
+			return state;
+		}
+
 		@Override
 		public Object newBranchId() {
 			return ++indexSource;
 		}
 
 		@Override
-		public void shift(Object oldBranch, List<ASymbol> symbols, Object newBranch) {
+		public void shift(Object oldBranch, Object newBranch) {
+			Deque<ASymbol> newDeque;
 			if (oldBranch == null) {
-				dequeByBranch.put(newBranch, new ArrayDeque<>(symbols));
+				newDeque = new ArrayDeque<>();
 			} else {
-				Deque<ASymbol> newDeque = new ArrayDeque<>(dequeByBranch.get(oldBranch));
-				newDeque.addAll(symbols);
-				dequeByBranch.put(newBranch, newDeque);
+				newDeque = new ArrayDeque<>(dequeByBranch.get(oldBranch));
+				newDeque.add(symbol);
 			}
+			dequeByBranch.put(newBranch, newDeque);
 			System.out.printf(
-					"shift(%s, %s, %s) -> %s\n",
+					"shift(%s, %s) -> %s\n",
 					oldBranch,
-					symbols,
 					newBranch,
 					dequeByBranch.get(newBranch)
 			);

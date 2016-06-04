@@ -5,13 +5,10 @@ import org.msyu.javautil.cf.WrapList;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Queue;
 import java.util.Set;
-
-import static java.util.Collections.emptyList;
 
 public final class State {
 
@@ -25,13 +22,11 @@ public final class State {
 
 	private State(Sapling sapling, GlrCallback callback) {
 		this.sapling = sapling;
-
 		Object initialBranchId = callback.newBranchId();
-		callback.shift(null, emptyList(), initialBranchId);
+		callback.shift(null, initialBranchId);
 		List<ItemStack> stacks = new ArrayList<>();
 		for (Item item : sapling.initialItems) {
-			ItemStack stack = new ItemStack(initialBranchId, item.position, item, null);
-			stacks.add(stack);
+			stacks.add(new ItemStack(initialBranchId, item.position, item, null));
 		}
 		this.stacks = WrapList.immutable(stacks);
 		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
@@ -49,7 +44,7 @@ public final class State {
 			for (ItemStack oldStack : previousState.stacks) {
 				if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
 					Object shiftedBranchId = callback.newBranchId();
-					callback.shift(oldStack.id, Collections.singletonList(terminal), shiftedBranchId);
+					callback.shift(oldStack.id, shiftedBranchId);
 					shiftedStacks.add(oldStack.shift(shiftedBranchId));
 				}
 			}
