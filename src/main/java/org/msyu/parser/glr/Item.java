@@ -1,5 +1,7 @@
 package org.msyu.parser.glr;
 
+import java.util.List;
+
 final class Item {
 
 	private static final String SPACE_ARROW = " \u2192";
@@ -19,6 +21,10 @@ final class Item {
 
 	final boolean isFinished() {
 		return position == production.rhs.size();
+	}
+
+	final List<ASymbol> getCompletedSymbols() {
+		return production.rhs.subList(0, position);
 	}
 
 	final ASymbol getExpectedNextSymbol() {

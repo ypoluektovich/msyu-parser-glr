@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-final class Production {
+final class Production implements ProductionHandle {
 
 	final NonTerminal lhs;
 	final List<ASymbol> rhs;
@@ -27,6 +27,17 @@ final class Production {
 	@Override
 	public final String toString() {
 		return Item.toString(this, -1);
+	}
+
+
+	@Override
+	public final NonTerminal getLHS() {
+		return lhs;
+	}
+
+	@Override
+	public final List<ASymbol> getRHS() {
+		return rhs;
 	}
 
 }

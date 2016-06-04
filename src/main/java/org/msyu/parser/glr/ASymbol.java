@@ -36,4 +36,9 @@ public abstract class ASymbol {
 		return Objects.hashCode(name);
 	}
 
+
+	public final String getName() {
+		return name;
+	}
+
 }

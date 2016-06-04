@@ -4,61 +4,54 @@ import org.msyu.javautil.cf.WrapList;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Queue;
-import java.util.stream.Collectors;
 
 public final class State {
 
 	private final Sapling sapling;
 	private final List<ItemStack> stacks;
-	/** todo: encapsulate */
-	public final List<NonTerminal> completedGoals;
 
-	public static State initializeFrom(Sapling sapling) {
-		return new State(sapling);
+	public static State initializeFrom(Sapling sapling, GlrCallback callback) {
+		return new State(sapling, callback);
 	}
 
-	private State(Sapling sapling) {
+	private State(Sapling sapling, GlrCallback callback) {
 		this.sapling = sapling;
 
 		List<ItemStack> stacks = new ArrayList<>();
 		for (Item item : sapling.initialItems) {
-			stacks.add(new ItemStack(item, null));
+			ItemStack stack = new ItemStack(item, null);
+			stacks.add(stack);
+			callback.shift(null, item.getCompletedSymbols(), stack);
 		}
 		this.stacks = WrapList.immutable(stacks);
-
-		List<NonTerminal> completedGoals = new ArrayList<>();
-		for (NonTerminal goal : sapling.goals) {
-			if (sapling.grammar.skippableSymbols.contains(goal)) {
-				completedGoals.add(goal);
-			}
-		}
-		this.completedGoals = WrapList.immutable(completedGoals);
 	}
 
-	public final State advance(Terminal terminal) {
-		return new State(this, terminal);
+	public final State advance(Terminal terminal, GlrCallback callback) {
+		return new State(this, terminal, callback);
 	}
 
-	private State(State previousState, Terminal terminal) {
+	private State(State previousState, Terminal terminal, GlrCallback callback) {
 		this.sapling = previousState.sapling;
 		List<ItemStack> stacks = new ArrayList<>();
-		List<NonTerminal> completedGoals = new ArrayList<>();
-		reduce(
-				previousState.stacks.stream()
-						.filter(stack -> stack.item.getExpectedNextSymbol().equals(terminal))
-						.map(stack -> new ItemStack(stack.item.shift(), stack.nextInStack))
-						.collect(Collectors.toList()),
-				stacks,
-				completedGoals
-		);
+		{
+			List<ItemStack> shiftedStacks = new ArrayList<>();
+			for (ItemStack oldStack : previousState.stacks) {
+				if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
+					ItemStack newStack = new ItemStack(oldStack.item.shift(), oldStack.nextInStack);
+					shiftedStacks.add(newStack);
+					callback.shift(oldStack, Collections.singletonList(terminal), newStack);
+				}
+			}
+			reduce(shiftedStacks, stacks, callback);
+		}
 		this.stacks = WrapList.immutable(stacks);
-		this.completedGoals = WrapList.immutable(completedGoals);
 	}
 
-	private void reduce(List<ItemStack> oldStacks, List<ItemStack> newStacks, List<NonTerminal> completedGoals) {
+	private void reduce(List<ItemStack> oldStacks, List<ItemStack> newStacks, GlrCallback callback) {
 		Queue<ItemStack> stacksQueue = new ArrayDeque<>(oldStacks);
 		for (ItemStack stack; (stack = stacksQueue.poll()) != null; ) {
 			if (!stack.item.isFinished()) {
@@ -66,27 +59,22 @@ public final class State {
 				continue;
 			}
 			ItemStack nextInStack = stack.nextInStack;
-			NonTerminal completedSymbol = stack.item.production.lhs;
-			if (sapling.goals.contains(completedSymbol)) {
-				// todo: supply more info than the completed symbol
-				completedGoals.add(completedSymbol);
+			Production completedProduction = stack.item.production;
+			NonTerminal completedSymbol = completedProduction.lhs;
+
+			for (Item newItem : sapling.grammar.getItemsInitializedBy(completedSymbol)) {
+				if (itemIsGoodAsBlindReductionTarget(newItem, nextInStack)) {
+					Item shiftedNewItem = newItem.shift();
+					ItemStack newStack = new ItemStack(shiftedNewItem, nextInStack);
+					stacksQueue.add(newStack);
+					callback.reduce(stack, completedProduction, newItem.getCompletedSymbols(), newStack);
+				}
 			}
 
-			sapling.grammar.getItemsInitializedBy(completedSymbol).stream()
-					.filter(item ->
-							nextInStack == null ||
-									sapling.grammar
-											.getInitializingNonTerminalsOf((NonTerminal) nextInStack.item.getExpectedNextSymbol())
-											.contains(item.production.lhs)
-					)
-					.filter(item -> sapling.allowedBlindReductionNonTerminals.contains(item.production.lhs))
-					.map(Item::shift)
-					.distinct()
-					.map(item -> new ItemStack(item, nextInStack))
-					.forEach(stacksQueue::add);
-
 			if (nextInStack != null && nextInStack.item.getExpectedNextSymbol().equals(completedSymbol)) {
-				stacksQueue.add(new ItemStack(nextInStack.item.shift(), nextInStack.nextInStack));
+				ItemStack newStack = new ItemStack(nextInStack.item.shift(), nextInStack.nextInStack);
+				stacksQueue.add(newStack);
+				callback.reduce(stack, completedProduction, Collections.emptyList(), newStack);
 			}
 		}
 
@@ -97,10 +85,22 @@ public final class State {
 				iterator.remove();
 				NonTerminal nextSymbol = (NonTerminal) item.getExpectedNextSymbol();
 				for (Item nextItem : sapling.grammar.getInitializingItemsOf(nextSymbol)) {
-					iterator.add(new ItemStack(nextItem, stack));
+					ItemStack newStack = new ItemStack(nextItem, stack);
+					iterator.add(newStack);
+					callback.shift(stack, Collections.emptyList(), newStack);
 				}
 			}
 		}
+	}
+
+	private boolean itemIsGoodAsBlindReductionTarget(Item item, ItemStack nextInStack) {
+		boolean itemLhsInitializesNextInStack =
+				nextInStack == null ||
+						sapling.grammar
+								.getInitializingNonTerminalsOf((NonTerminal) nextInStack.item.getExpectedNextSymbol())
+								.contains(item.production.lhs);
+		return itemLhsInitializesNextInStack &&
+				sapling.allowedBlindReductionNonTerminals.contains(item.production.lhs);
 	}
 
 }

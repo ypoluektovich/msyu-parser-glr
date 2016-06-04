@@ -32,7 +32,7 @@ public final class GrammarBuilder extends GrammarSeed {
 		return symbol;
 	}
 
-	public final void addProduction(NonTerminal lhs, List<ASymbol> rhs) {
+	public final ProductionHandle addProduction(NonTerminal lhs, List<ASymbol> rhs) {
 		if (!nonTerminals.containsKey(lhs)) {
 			throw new IllegalArgumentException("production lhs must be a non-terminal from this grammar");
 		}
@@ -57,11 +57,13 @@ public final class GrammarBuilder extends GrammarSeed {
 					}
 				}
 		);
-		nonTerminals.get(lhs).add(new Production(lhs, rhs));
+		Production production = new Production(lhs, rhs);
+		nonTerminals.get(lhs).add(production);
+		return production;
 	}
 
-	public final void addProduction(NonTerminal lhs, ASymbol... rhs) {
-		addProduction(lhs, rhs == null ? null : Arrays.asList(rhs));
+	public final ProductionHandle addProduction(NonTerminal lhs, ASymbol... rhs) {
+		return addProduction(lhs, rhs == null ? null : Arrays.asList(rhs));
 	}
 
 	public final Grammar build() {
