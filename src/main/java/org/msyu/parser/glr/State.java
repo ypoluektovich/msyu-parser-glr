@@ -50,7 +50,7 @@ public final class State {
 				if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
 					Object shiftedBranchId = callback.newBranchId();
 					callback.shift(oldStack.id, Collections.singletonList(terminal), shiftedBranchId);
-					shiftedStacks.add(shift(oldStack, shiftedBranchId));
+					shiftedStacks.add(oldStack.shift(shiftedBranchId));
 				}
 			}
 			reduce(shiftedStacks, stacks, callback);
@@ -80,7 +80,7 @@ public final class State {
 			}
 
 			if (nextInStack != null && nextInStack.item.getExpectedNextSymbol().equals(completedSymbol)) {
-				stacksQueue.add(shift(nextInStack, reducedBranchId));
+				stacksQueue.add(nextInStack.shift(reducedBranchId));
 			}
 		}
 
@@ -91,14 +91,10 @@ public final class State {
 				iterator.remove();
 				NonTerminal nextSymbol = (NonTerminal) item.getExpectedNextSymbol();
 				for (Item nextItem : sapling.grammar.getInitializingItemsOf(nextSymbol)) {
-					iterator.add(new ItemStack(stack.id, nextItem.position, nextItem, stack));
+					iterator.add(new ItemStack(stack.id, nextItem.position, nextItem, stack.copyWithNoId()));
 				}
 			}
 		}
-	}
-
-	private static ItemStack shift(ItemStack stack, Object branchId) {
-		return new ItemStack(branchId, stack.prependedEmptySymbols, stack.item.shift(), stack.nextInStack);
 	}
 
 	private boolean itemIsGoodAsBlindReductionTarget(Item item, ItemStack nextInStack) {
