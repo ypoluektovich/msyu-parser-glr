@@ -50,8 +50,7 @@ public final class State {
 				if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
 					Object shiftedBranchId = callback.newBranchId();
 					callback.shift(oldStack.id, Collections.singletonList(terminal), shiftedBranchId);
-					ItemStack newStack = new ItemStack(shiftedBranchId, oldStack.prependedEmptySymbols, oldStack.item.shift(), oldStack.nextInStack);
-					shiftedStacks.add(newStack);
+					shiftedStacks.add(shift(oldStack, shiftedBranchId));
 				}
 			}
 			reduce(shiftedStacks, stacks, callback);
@@ -76,15 +75,12 @@ public final class State {
 
 			for (Item newItem : sapling.grammar.getItemsInitializedBy(completedSymbol)) {
 				if (itemIsGoodAsBlindReductionTarget(newItem, nextInStack)) {
-					Item shiftedNewItem = newItem.shift();
-					ItemStack newStack = new ItemStack(reducedBranchId, newItem.position, shiftedNewItem, nextInStack);
-					stacksQueue.add(newStack);
+					stacksQueue.add(new ItemStack(reducedBranchId, newItem.position, newItem.shift(), nextInStack));
 				}
 			}
 
 			if (nextInStack != null && nextInStack.item.getExpectedNextSymbol().equals(completedSymbol)) {
-				ItemStack newStack = new ItemStack(reducedBranchId, nextInStack.prependedEmptySymbols, nextInStack.item.shift(), nextInStack.nextInStack);
-				stacksQueue.add(newStack);
+				stacksQueue.add(shift(nextInStack, reducedBranchId));
 			}
 		}
 
@@ -99,6 +95,10 @@ public final class State {
 				}
 			}
 		}
+	}
+
+	private static ItemStack shift(ItemStack stack, Object branchId) {
+		return new ItemStack(branchId, stack.prependedEmptySymbols, stack.item.shift(), stack.nextInStack);
 	}
 
 	private boolean itemIsGoodAsBlindReductionTarget(Item item, ItemStack nextInStack) {
