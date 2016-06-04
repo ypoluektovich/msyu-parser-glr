@@ -9,7 +9,7 @@ final class Item {
 	private static final String SPACE_BULLET = " \u2022";
 
 	final Production production;
-	private final int position;
+	final int position;
 
 	/**
 	 * USE ONLY IN PRODUCTION CONSTRUCTOR!

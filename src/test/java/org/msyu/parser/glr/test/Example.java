@@ -14,11 +14,8 @@ import org.testng.annotations.Test;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class Example {
 
@@ -54,27 +51,30 @@ public class Example {
 		MyCallback callback = new MyCallback();
 
 		State state = State.initializeFrom(sapling, callback);
-		callback.completeIteration();
+		callback.completeIteration(state);
 		state = state.advance(id, callback);
-		callback.completeIteration();
+		callback.completeIteration(state);
 		state = state.advance(times, callback);
-		callback.completeIteration();
+		callback.completeIteration(state);
 		state = state.advance(num, callback);
-		callback.completeIteration();
+		callback.completeIteration(state);
 		state = state.advance(plus, callback);
-		callback.completeIteration();
+		callback.completeIteration(state);
 		state = state.advance(num, callback);
-		callback.completeIteration();
+		callback.completeIteration(state);
 		state = state.advance(eof, callback);
-		callback.completeIteration();
+		callback.completeIteration(state);
 	}
 
 	private static class MyCallback implements GlrCallback {
 
 		private int indexSource = 0;
 		private final Map<Object, Deque<ASymbol>> dequeByBranch = new HashMap<>();
-		private final Map<Object, Integer> indexByBranch = new HashMap<>();
-		private final Set<Object> newAndNotReferencedBranches = new HashSet<>();
+
+		@Override
+		public Object newBranchId() {
+			return ++indexSource;
+		}
 
 		@Override
 		public void shift(Object oldBranch, List<ASymbol> symbols, Object newBranch) {
@@ -85,51 +85,37 @@ public class Example {
 				newDeque.addAll(symbols);
 				dequeByBranch.put(newBranch, newDeque);
 			}
-			newAndNotReferencedBranches.remove(oldBranch);
-			newAndNotReferencedBranches.add(newBranch);
 			System.out.printf(
-					"shift(%s, %s, %s%s) -> %s\n",
-					indexByBranch.get(oldBranch),
+					"shift(%s, %s, %s) -> %s\n",
+					oldBranch,
 					symbols,
-					indexByBranch.computeIfAbsent(newBranch, __ -> ++indexSource),
 					newBranch,
 					dequeByBranch.get(newBranch)
 			);
 		}
 
 		@Override
-		public void reduce(Object oldBranch, ProductionHandle productionHandle, List<ASymbol> prependedEmptySymbols, Object newBranch) {
+		public void reduce(Object oldBranch, ProductionHandle productionHandle, int prependedEmptySymbols, Object newBranch) {
 			Deque<ASymbol> newDeque = new ArrayDeque<>(dequeByBranch.get(oldBranch));
-			for (int i = 0; i < productionHandle.getRHS().size(); ++i) {
+			for (int i = 0, n = productionHandle.getRHS().size() - prependedEmptySymbols; i < n; ++i) {
 				newDeque.removeLast();
 			}
-			newDeque.addAll(prependedEmptySymbols);
 			newDeque.add(productionHandle.getLHS());
 			dequeByBranch.put(newBranch, newDeque);
-			newAndNotReferencedBranches.remove(oldBranch);
-			newAndNotReferencedBranches.add(newBranch);
 			System.out.printf(
-					"reduce(%s, %s, %s, %s%s) -> %s\n",
-					indexByBranch.get(oldBranch),
+					"reduce(%s, %s, %s, %s) -> %s\n",
+					oldBranch,
 					productionHandle,
 					prependedEmptySymbols,
-					indexByBranch.computeIfAbsent(newBranch, __ -> ++indexSource),
 					newBranch,
 					dequeByBranch.get(newBranch)
 			);
 		}
 
-		final void completeIteration() {
+		final void completeIteration(State state) {
 			System.out.println("completed");
-			for (Iterator<Object> iterator = dequeByBranch.keySet().iterator(); iterator.hasNext(); ) {
-				Object branch = iterator.next();
-				if (!newAndNotReferencedBranches.contains(branch)) {
-					iterator.remove();
-					indexByBranch.remove(branch);
-				}
-			}
-			newAndNotReferencedBranches.clear();
-			System.out.println(indexByBranch.values());
+			dequeByBranch.keySet().retainAll(state.getUsedStackIds());
+			System.out.println(dequeByBranch.keySet());
 			System.out.println();
 		}
 

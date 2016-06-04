@@ -1,5 +1,6 @@
 package org.msyu.parser.glr;
 
+import org.msyu.javautil.cf.CopySet;
 import org.msyu.javautil.cf.WrapList;
 
 import java.util.ArrayDeque;
@@ -8,11 +9,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Queue;
+import java.util.Set;
+
+import static java.util.Collections.emptyList;
 
 public final class State {
 
 	private final Sapling sapling;
 	private final List<ItemStack> stacks;
+	private final Set<Object> stackIds;
 
 	public static State initializeFrom(Sapling sapling, GlrCallback callback) {
 		return new State(sapling, callback);
@@ -21,13 +26,15 @@ public final class State {
 	private State(Sapling sapling, GlrCallback callback) {
 		this.sapling = sapling;
 
+		Object initialBranchId = callback.newBranchId();
+		callback.shift(null, emptyList(), initialBranchId);
 		List<ItemStack> stacks = new ArrayList<>();
 		for (Item item : sapling.initialItems) {
-			ItemStack stack = new ItemStack(item, null);
+			ItemStack stack = new ItemStack(initialBranchId, item.position, item, null);
 			stacks.add(stack);
-			callback.shift(null, item.getCompletedSymbols(), stack);
 		}
 		this.stacks = WrapList.immutable(stacks);
+		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
 	}
 
 	public final State advance(Terminal terminal, GlrCallback callback) {
@@ -41,14 +48,16 @@ public final class State {
 			List<ItemStack> shiftedStacks = new ArrayList<>();
 			for (ItemStack oldStack : previousState.stacks) {
 				if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
-					ItemStack newStack = new ItemStack(oldStack.item.shift(), oldStack.nextInStack);
+					Object shiftedBranchId = callback.newBranchId();
+					callback.shift(oldStack.id, Collections.singletonList(terminal), shiftedBranchId);
+					ItemStack newStack = new ItemStack(shiftedBranchId, oldStack.prependedEmptySymbols, oldStack.item.shift(), oldStack.nextInStack);
 					shiftedStacks.add(newStack);
-					callback.shift(oldStack, Collections.singletonList(terminal), newStack);
 				}
 			}
 			reduce(shiftedStacks, stacks, callback);
 		}
 		this.stacks = WrapList.immutable(stacks);
+		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
 	}
 
 	private void reduce(List<ItemStack> oldStacks, List<ItemStack> newStacks, GlrCallback callback) {
@@ -62,19 +71,20 @@ public final class State {
 			Production completedProduction = stack.item.production;
 			NonTerminal completedSymbol = completedProduction.lhs;
 
+			Object reducedBranchId = callback.newBranchId();
+			callback.reduce(stack.id, completedProduction, stack.prependedEmptySymbols, reducedBranchId);
+
 			for (Item newItem : sapling.grammar.getItemsInitializedBy(completedSymbol)) {
 				if (itemIsGoodAsBlindReductionTarget(newItem, nextInStack)) {
 					Item shiftedNewItem = newItem.shift();
-					ItemStack newStack = new ItemStack(shiftedNewItem, nextInStack);
+					ItemStack newStack = new ItemStack(reducedBranchId, newItem.position, shiftedNewItem, nextInStack);
 					stacksQueue.add(newStack);
-					callback.reduce(stack, completedProduction, newItem.getCompletedSymbols(), newStack);
 				}
 			}
 
 			if (nextInStack != null && nextInStack.item.getExpectedNextSymbol().equals(completedSymbol)) {
-				ItemStack newStack = new ItemStack(nextInStack.item.shift(), nextInStack.nextInStack);
+				ItemStack newStack = new ItemStack(reducedBranchId, nextInStack.prependedEmptySymbols, nextInStack.item.shift(), nextInStack.nextInStack);
 				stacksQueue.add(newStack);
-				callback.reduce(stack, completedProduction, Collections.emptyList(), newStack);
 			}
 		}
 
@@ -85,9 +95,7 @@ public final class State {
 				iterator.remove();
 				NonTerminal nextSymbol = (NonTerminal) item.getExpectedNextSymbol();
 				for (Item nextItem : sapling.grammar.getInitializingItemsOf(nextSymbol)) {
-					ItemStack newStack = new ItemStack(nextItem, stack);
-					iterator.add(newStack);
-					callback.shift(stack, Collections.emptyList(), newStack);
+					iterator.add(new ItemStack(stack.id, nextItem.position, nextItem, stack));
 				}
 			}
 		}
@@ -101,6 +109,11 @@ public final class State {
 								.contains(item.production.lhs);
 		return itemLhsInitializesNextInStack &&
 				sapling.allowedBlindReductionNonTerminals.contains(item.production.lhs);
+	}
+
+
+	public final Set<Object> getUsedStackIds() {
+		return stackIds;
 	}
 
 }
