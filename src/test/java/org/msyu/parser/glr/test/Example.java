@@ -8,47 +8,55 @@ import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
 import org.testng.annotations.Test;
 
-public class Example {
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.verify;
 
-	@Test
-	public void example() {
-		GrammarBuilder gb = new GrammarBuilder();
+public class Example extends ReachTheGoalTestBase {
 
-		Terminal id = gb.addTerminal("id");
-		Terminal num = gb.addTerminal("num");
-		Terminal times = gb.addTerminal("*");
-		Terminal plus = gb.addTerminal("+");
-		Terminal eof = gb.addTerminal("eof");
+	GrammarBuilder gb = new GrammarBuilder();
 
-		NonTerminal value = gb.addNonTerminal("Value");
+	Terminal id = gb.addTerminal("id");
+	Terminal num = gb.addTerminal("num");
+	Terminal times = gb.addTerminal("*");
+	Terminal plus = gb.addTerminal("+");
+	Terminal eof = gb.addTerminal("eof");
+
+	NonTerminal value = gb.addNonTerminal("Value");
+	NonTerminal products = gb.addNonTerminal("Products");
+	NonTerminal sums = gb.addNonTerminal("Sums");
+	NonTerminal goal = gb.addNonTerminal("Goal");
+
+	{
 		gb.addProduction(value, id);
 		gb.addProduction(value, num);
 
-		NonTerminal products = gb.addNonTerminal("Products");
 		gb.addProduction(products, products, times, value);
 		gb.addProduction(products, value);
 
-		NonTerminal sums = gb.addNonTerminal("Sums");
 		gb.addProduction(sums, sums, plus, products);
 		gb.addProduction(sums, products);
 
-		NonTerminal goal = gb.addNonTerminal("Goal");
-		gb.addProduction(goal, sums, eof);
+		goalProduction = gb.addProduction(goal, sums, eof);
+	}
 
-		Grammar grammar = gb.build();
+	Grammar grammar = gb.build();
+	Sapling sapling = grammar.newSapling(goal);
 
-		Sapling sapling = grammar.newSapling(goal);
-
-		LoggingCallback callback = new LoggingCallback();
-
+	@Test
+	public void example() {
 		State state = State.initializeFrom(sapling, callback);
 		callback.completeIteration(state);
+
 		state = callback.advance(state, id);
 		state = callback.advance(state, times);
 		state = callback.advance(state, num);
 		state = callback.advance(state, plus);
 		state = callback.advance(state, num);
 		state = callback.advance(state, eof);
+
+		verify(callback).reduce(any(), eq(goalProduction), anyInt(), any());
 	}
 
 }
