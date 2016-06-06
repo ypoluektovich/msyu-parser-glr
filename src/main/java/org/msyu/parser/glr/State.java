@@ -104,13 +104,21 @@ public final class State {
 	}
 
 	private boolean itemIsGoodAsBlindReductionTarget(Item item, ItemStack nextInStack) {
-		boolean itemLhsInitializesNextInStack =
-				nextInStack == null ||
-						sapling.grammar
-								.getAllInitializingNonTerminalsOf((NonTerminal) nextInStack.item.getExpectedNextSymbol())
-								.contains(item.production.lhs);
-		return itemLhsInitializesNextInStack &&
-				sapling.allowedBlindReductionNonTerminals.contains(item.production.lhs);
+		boolean lhsFitsExpected = false;
+		boolean skipSaplingCheck = false;
+		if (nextInStack == null) {
+			lhsFitsExpected = true;
+		} else if (nextInStack.item.getExpectedNextSymbol() == item.production.lhs) {
+			lhsFitsExpected = true;
+			skipSaplingCheck = true;
+		} else if (sapling.grammar
+				.getAllInitializingNonTerminalsOf((NonTerminal) nextInStack.item.getExpectedNextSymbol())
+				.contains(item.production.lhs)
+		) {
+			lhsFitsExpected = true;
+		}
+		return lhsFitsExpected &&
+				(skipSaplingCheck || sapling.allowedBlindReductionNonTerminals.contains(item.production.lhs));
 	}
 
 
