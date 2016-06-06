@@ -18,6 +18,8 @@ public class FillableComputationTest {
 		gb.addProduction(B, A);
 		Grammar grammar = gb.build();
 
+		GrammarAssertions.runAllAssertionsFor(grammar);
+
 		assertThat(grammar.fillableSymbols, not(hasItem(A)));
 		assertThat(grammar.fillableSymbols, not(hasItem(B)));
 	}
@@ -32,6 +34,8 @@ public class FillableComputationTest {
 		gb.addProduction(B, A);
 		Grammar grammar = gb.build();
 
+		GrammarAssertions.runAllAssertionsFor(grammar);
+
 		assertThat(grammar.fillableSymbols, not(hasItem(A)));
 	}
 
@@ -45,6 +49,8 @@ public class FillableComputationTest {
 		gb.addProduction(A);
 		gb.addProduction(B, A, A);
 		Grammar grammar = gb.build();
+
+		GrammarAssertions.runAllAssertionsFor(grammar);
 
 		assertThat(grammar.fillableSymbols, hasItem(A));
 		assertThat(grammar.fillableSymbols, hasItem(B));

@@ -18,6 +18,8 @@ public class SkippableComputationTest {
 		gb.addProduction(B, A);
 		Grammar grammar = gb.build();
 
+		GrammarAssertions.runAllAssertionsFor(grammar);
+
 		assertThat(grammar.skippableSymbols, not(hasItem(A)));
 		assertThat(grammar.skippableSymbols, not(hasItem(B)));
 	}

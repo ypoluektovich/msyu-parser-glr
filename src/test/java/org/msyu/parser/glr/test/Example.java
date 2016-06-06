@@ -1,9 +1,6 @@
 package org.msyu.parser.glr.test;
 
-import org.msyu.parser.glr.Grammar;
-import org.msyu.parser.glr.GrammarBuilder;
 import org.msyu.parser.glr.NonTerminal;
-import org.msyu.parser.glr.Sapling;
 import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
 import org.testng.annotations.Test;
@@ -14,8 +11,6 @@ import static org.mockito.Mockito.verify;
 
 public class Example extends ReachTheGoalTestBase {
 
-	GrammarBuilder gb = new GrammarBuilder();
-
 	Terminal id = gb.addTerminal("id");
 	Terminal num = gb.addTerminal("num");
 	Terminal times = gb.addTerminal("*");
@@ -25,9 +20,10 @@ public class Example extends ReachTheGoalTestBase {
 	NonTerminal value = gb.addNonTerminal("Value");
 	NonTerminal products = gb.addNonTerminal("Products");
 	NonTerminal sums = gb.addNonTerminal("Sums");
-	NonTerminal goal = gb.addNonTerminal("Goal");
 
 	{
+		goal = gb.addNonTerminal("Goal");
+
 		gb.addProduction(value, id);
 		gb.addProduction(value, num);
 
@@ -39,9 +35,6 @@ public class Example extends ReachTheGoalTestBase {
 
 		goalProduction = gb.addProduction(goal, sums, eof);
 	}
-
-	Grammar grammar = gb.build();
-	Sapling sapling = grammar.newSapling(goal);
 
 	@Test
 	public void example() {

@@ -1,9 +1,6 @@
 package org.msyu.parser.glr.test;
 
-import org.msyu.parser.glr.Grammar;
-import org.msyu.parser.glr.GrammarBuilder;
 import org.msyu.parser.glr.NonTerminal;
-import org.msyu.parser.glr.Sapling;
 import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
 import org.testng.annotations.Test;
@@ -15,23 +12,19 @@ import static org.mockito.Mockito.verify;
 
 public class SkippableSymbolAtTheEnd extends ReachTheGoalTestBase {
 
-	GrammarBuilder gb = new GrammarBuilder();
-
 	Terminal prefix = gb.addTerminal("prefix");
 	Terminal suffix = gb.addTerminal("suffix");
 
 	NonTerminal skippable = gb.addNonTerminal("Skippable");
-	NonTerminal goal = gb.addNonTerminal("Goal");
 
 	{
+		goal = gb.addNonTerminal("Goal");
+
 		gb.addProduction(skippable);
 		gb.addProduction(skippable, suffix);
 
 		goalProduction = gb.addProduction(goal, prefix, skippable);
 	}
-
-	Grammar grammar = gb.build();
-	Sapling sapling = grammar.newSapling(goal);
 
 	@Test
 	public void skipped() {
