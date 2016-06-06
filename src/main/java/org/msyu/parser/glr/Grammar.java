@@ -262,6 +262,9 @@ public final class Grammar extends GrammarSeed {
 						Item item = production.items.get(rhs.size());
 						do {
 							completableItems.add(item);
+							if (item.position == 0) {
+								break;
+							}
 							item = production.items.get(item.position - 1);
 						} while (skippableSymbols.contains(item.getExpectedNextSymbol()));
 					}
