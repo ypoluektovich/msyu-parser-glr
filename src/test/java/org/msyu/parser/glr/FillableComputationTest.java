@@ -14,6 +14,20 @@ public class FillableComputationTest {
 		Terminal a = gb.addTerminal("a");
 		NonTerminal A = gb.addNonTerminal("A");
 		NonTerminal B = gb.addNonTerminal("B");
+		gb.addProduction(A, B);
+		gb.addProduction(B, A);
+		Grammar grammar = gb.build();
+
+		assertThat(grammar.fillableSymbols, not(hasItem(A)));
+		assertThat(grammar.fillableSymbols, not(hasItem(B)));
+	}
+
+	@Test
+	public void unendingRecursionWithFillableTailIsNotFillable() {
+		GrammarBuilder gb = new GrammarBuilder();
+		Terminal a = gb.addTerminal("a");
+		NonTerminal A = gb.addNonTerminal("A");
+		NonTerminal B = gb.addNonTerminal("B");
 		gb.addProduction(A, B, a);
 		gb.addProduction(B, A);
 		Grammar grammar = gb.build();
