@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -65,15 +66,13 @@ public final class Grammar extends GrammarSeed {
 			Set<ASymbol> fillableSymbols,
 			Set<Item> completableItems
 	) {
-		abstract class ACheck implements Runnable {
-			final Item item;
-
-			ACheck(Item item) {
-				this.item = item;
-			}
-		}
-
 		{
+			abstract class ACheck implements Runnable {
+				final Item item;
+				ACheck(Item item) {
+					this.item = item;
+				}
+			}
 			Queue<ACheck> checksQueue = new ArrayDeque<>();
 			Map<ASymbol, Boolean> isSymbolSkippable = new HashMap<>();
 			Map<ASymbol, List<ACheck>> waitingChecksByDependency = new HashMap<>();
@@ -134,54 +133,73 @@ public final class Grammar extends GrammarSeed {
 
 		Set<Production> fillableProductions = new HashSet<>();
 		{
-			Queue<ACheck> checksQueue = new ArrayDeque<>();
+			Queue<Production> checksQueue = new ArrayDeque<>();
 			Map<ASymbol, Boolean> isSymbolFillable = new HashMap<>();
-			Map<ASymbol, List<ACheck>> waitingChecksByDependency = new HashMap<>();
+			Map<ASymbol, Set<Production>> waitingChecksByDependency = new HashMap<>();
 			Map<NonTerminal, Set<Production>> remainingProductionsByLHS = new HashMap<>();
 
-			final class FillableCheck extends ACheck {
-				FillableCheck(Item item) {
-					super(item);
+			final class CheckState implements Runnable {
+				private final Production production;
+				private final List<ASymbol> remainingSymbols;
+				private boolean hasDefinitelyFillableSymbols = false;
+				private boolean answerFound = false;
+
+				CheckState(Production production) {
+					this.production = production;
+					remainingSymbols = new ArrayList<>(production.rhs);
 				}
 
 				@Override
 				public final void run() {
-					NonTerminal lhs = item.production.lhs;
-					if (item.isFinished()) {
-						if (item.production.rhs.stream().anyMatch(isSymbolFillable::containsKey)) {
-							fillableProductions.add(item.production);
-							isSymbolFillable.put(lhs, true);
-							fillableSymbols.add(lhs);
-							remainingProductionsByLHS.get(lhs).clear();
-							requeue(lhs);
-						} else {
-							// production is not fillable - no fillable symbols, all skippable or empty
-							failProduction();
+					if (answerFound) {
+						return;
+					}
+					for (Iterator<ASymbol> iterator = remainingSymbols.iterator(); iterator.hasNext(); ) {
+						ASymbol symbol = iterator.next();
+						Boolean fillable = isSymbolFillable.get(symbol);
+						if (fillable == Boolean.TRUE) {
+							hasDefinitelyFillableSymbols = true;
+							iterator.remove();
+							continue;
 						}
-					} else {
-						ASymbol nextSymbol = item.getExpectedNextSymbol();
-						Boolean nextSymbolFillable = isSymbolFillable.get(nextSymbol);
-						if (nextSymbolFillable == null) {
-							waitingChecksByDependency.computeIfAbsent(nextSymbol, __ -> new ArrayList<ACheck>()).add(this);
-						} else if (nextSymbolFillable || skippableSymbols.contains(nextSymbol)) {
-							checksQueue.add(new FillableCheck(item.shift()));
+						boolean skippable = skippableSymbols.contains(symbol);
+						if (fillable == Boolean.FALSE) {
+							if (skippable) {
+								iterator.remove();
+							} else {
+								failProduction();
+								return;
+							}
 						} else {
-							// production is not fillable - can neither fill nor skip a symbol
-							failProduction();
+							waitingChecksByDependency.computeIfAbsent(symbol, __ -> new HashSet<>()).add(production);
 						}
+					}
+					if (remainingSymbols.isEmpty() && !hasDefinitelyFillableSymbols) {
+						failProduction();
+						return;
+					}
+					if (hasDefinitelyFillableSymbols && remainingSymbols.stream().allMatch(skippableSymbols::contains)) {
+						answerFound = true;
+						NonTerminal lhs = production.lhs;
+						fillableProductions.add(production);
+						isSymbolFillable.put(lhs, true);
+						fillableSymbols.add(lhs);
+						remainingProductionsByLHS.get(lhs).clear();
+						requeue(lhs);
 					}
 				}
 
 				private void requeue(NonTerminal lhs) {
-					List<ACheck> waitingChecks = waitingChecksByDependency.getOrDefault(lhs, Collections.emptyList());
+					Set<Production> waitingChecks = waitingChecksByDependency.getOrDefault(lhs, Collections.emptySet());
 					checksQueue.addAll(waitingChecks);
 					waitingChecks.clear();
 				}
 
 				private void failProduction() {
-					NonTerminal lhs = item.production.lhs;
+					answerFound = true;
+					NonTerminal lhs = production.lhs;
 					Set<Production> remainingProductions = remainingProductionsByLHS.get(lhs);
-					remainingProductions.remove(item.production);
+					remainingProductions.remove(production);
 					if (remainingProductions.isEmpty()) {
 						isSymbolFillable.putIfAbsent(lhs, false);
 						requeue(lhs);
@@ -192,15 +210,17 @@ public final class Grammar extends GrammarSeed {
 				isSymbolFillable.put(terminal, true);
 				fillableSymbols.add(terminal);
 			}
+			Map<Production, CheckState> stateByProduction = new HashMap<>();
 			for (Map.Entry<NonTerminal, Set<Production>> symbolAndProductions : seed.nonTerminals.entrySet()) {
-				remainingProductionsByLHS.put(symbolAndProductions.getKey(), new HashSet<>(symbolAndProductions.getValue()));
-				for (Production production : symbolAndProductions.getValue()) {
-					Item startingItem = production.items.get(0);
-					checksQueue.add(new FillableCheck(startingItem));
+				Set<Production> productions = symbolAndProductions.getValue();
+				remainingProductionsByLHS.put(symbolAndProductions.getKey(), new HashSet<>(productions));
+				for (Production production : productions) {
+					stateByProduction.put(production, new CheckState(production));
+					checksQueue.add(production);
 				}
 			}
-			for (ACheck check; (check = checksQueue.poll()) != null; ) {
-				check.run();
+			for (Production production; (production = checksQueue.poll()) != null; ) {
+				stateByProduction.get(production).run();
 			}
 		}
 
