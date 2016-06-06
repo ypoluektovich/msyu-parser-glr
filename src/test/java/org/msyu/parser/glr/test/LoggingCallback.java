@@ -7,8 +7,10 @@ import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
 
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 class LoggingCallback implements GlrCallback {
@@ -27,45 +29,57 @@ class LoggingCallback implements GlrCallback {
 		return state;
 	}
 
-	@Override
-	public Object newBranchId() {
+	private Object newBranchId() {
 		return ++indexSource;
 	}
 
 	@Override
-	public void shift(Object oldBranch, Object newBranch) {
-		Deque<ASymbol> newDeque;
-		if (oldBranch == null) {
-			newDeque = new ArrayDeque<>();
-		} else {
-			newDeque = new ArrayDeque<>(dequeByBranch.get(oldBranch));
+	public Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols) {
+		boolean notInitialBranch = oldBranch != null;
+		Deque<ASymbol> newDeque = new ArrayDeque<>(notInitialBranch ? dequeByBranch.get(oldBranch) : Collections.emptyList());
+		newDeque.addAll(prependedEmptySymbols);
+		if (notInitialBranch) {
 			newDeque.add(symbol);
 		}
+		Object newBranch = newBranchId();
 		dequeByBranch.put(newBranch, newDeque);
-		System.out.printf(
-				"shift(%s, %s) -> %s\n",
-				oldBranch,
-				newBranch,
-				dequeByBranch.get(newBranch)
-		);
+		System.out.printf("shift(%s, %s) -> %s %s\n", oldBranch, prependedEmptySymbols, newBranch, newDeque);
+		return newBranch;
 	}
 
 	@Override
-	public void reduce(Object oldBranch, ProductionHandle production, int prependedEmptySymbols, Object newBranch) {
+	public Object skip(Object oldBranch, List<ASymbol> emptySymbols) {
 		Deque<ASymbol> newDeque = new ArrayDeque<>(dequeByBranch.get(oldBranch));
-		for (int i = 0, n = production.getRHS().size() - prependedEmptySymbols; i < n; ++i) {
+		newDeque.addAll(emptySymbols);
+		Object newBranch = newBranchId();
+		dequeByBranch.put(newBranch, newDeque);
+		System.out.printf("skip(%s, %s) -> %s %s\n", oldBranch, emptySymbols, newBranch, newDeque);
+		return newBranch;
+	}
+
+	@Override
+	public Object reduce(Object oldBranch, ProductionHandle production) {
+		Deque<ASymbol> newDeque = new ArrayDeque<>(dequeByBranch.get(oldBranch));
+		for (int i = 0; i < production.getRHS().size(); ++i) {
 			newDeque.removeLast();
 		}
 		newDeque.add(production.getLHS());
+		Object newBranch = newBranchId();
 		dequeByBranch.put(newBranch, newDeque);
-		System.out.printf(
-				"reduce(%s, %s, %s, %s) -> %s\n",
-				oldBranch,
-				production,
-				prependedEmptySymbols,
-				newBranch,
-				dequeByBranch.get(newBranch)
-		);
+		System.out.printf("reduce(%s, %s) -> %s %s\n", oldBranch, production, newBranch, newDeque);
+		return newBranch;
+	}
+
+	@Override
+	public Object insert(Object oldBranch, List<ASymbol> emptySymbols) {
+		Deque<ASymbol> newDeque = new ArrayDeque<>(dequeByBranch.get(oldBranch));
+		ASymbol popped = newDeque.removeLast();
+		newDeque.addAll(emptySymbols);
+		newDeque.add(popped);
+		Object newBranch = newBranchId();
+		dequeByBranch.put(newBranch, newDeque);
+		System.out.printf("insert(%s, %s) -> %s %s\n", oldBranch, emptySymbols, newBranch, newDeque);
+		return newBranch;
 	}
 
 	void completeIteration(State state) {

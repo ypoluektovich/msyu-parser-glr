@@ -1,9 +1,11 @@
 package org.msyu.parser.glr;
 
+import java.util.List;
+
 final class ItemStack {
 
 	final Object id;
-	final int prependedEmptySymbols;
+	private final int prependedEmptySymbols;
 	final Item item;
 	final ItemStack nextInStack;
 	private volatile ItemStack copyWithNoId;
@@ -15,8 +17,53 @@ final class ItemStack {
 		this.nextInStack = nextInStack;
 	}
 
-	final ItemStack shift(Object branchId) {
-		return new ItemStack(branchId, prependedEmptySymbols, item.shift(), nextInStack);
+	final ItemStack shift(GlrCallback callback) {
+		return new ItemStack(
+				callback.shift(id, item.getCompletedSymbols(prependedEmptySymbols)),
+				0,
+				item.shift(),
+				nextInStack
+		);
+	}
+
+	final ItemStack skipToEnd(GlrCallback callback) {
+		Production production = item.production;
+		List<ASymbol> rhs = production.rhs;
+		return new ItemStack(
+				callback.skip(id, rhs.subList(item.position, rhs.size())),
+				0,
+				production.items.get(rhs.size()),
+				nextInStack
+		);
+	}
+
+	/**
+	 * Called on the stack <em>being reduced</em>.
+	 */
+	final ItemStack finishBlindReduction(GlrCallback callback, Object reducedBranchId, Item newItem) {
+		return new ItemStack(
+				callback.insert(reducedBranchId, newItem.getCompletedSymbols()),
+				0,
+				newItem.shift(),
+				nextInStack
+		);
+	}
+
+	/**
+	 * Called on the stack <em>into</em> which the reduction happened.
+	 */
+	final ItemStack finishGuidedReduction(GlrCallback callback, Object reducedBranchId) {
+		return new ItemStack(
+				callback.insert(reducedBranchId, item.getCompletedSymbols(prependedEmptySymbols)),
+				0,
+				item.shift(),
+				nextInStack
+		);
+	}
+
+	final ItemStack skipTo(Item item) {
+		assert this.item.production == item.production : "ItemStack.skipTo() called with an item from another production";
+		return new ItemStack(id, prependedEmptySymbols + item.position - this.item.position, item, nextInStack);
 	}
 
 	final ItemStack copyWithNoId() {

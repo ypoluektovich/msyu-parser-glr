@@ -1,11 +1,15 @@
 package org.msyu.parser.glr;
 
+import java.util.List;
+
 public interface GlrCallback {
 
-	Object newBranchId();
+	Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols);
 
-	void shift(Object oldBranch, Object newBranch);
+	Object skip(Object oldBranch, List<ASymbol> emptySymbols);
 
-	void reduce(Object oldBranch, ProductionHandle productionHandle, int prependedEmptySymbols, Object newBranch);
+	Object reduce(Object oldBranch, ProductionHandle production);
+
+	Object insert(Object oldBranch, List<ASymbol> emptySymbols);
 
 }

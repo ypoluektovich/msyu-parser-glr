@@ -24,7 +24,11 @@ final class Item {
 	}
 
 	final List<ASymbol> getCompletedSymbols() {
-		return production.rhs.subList(0, position);
+		return getCompletedSymbols(position);
+	}
+
+	final List<ASymbol> getCompletedSymbols(int count) {
+		return production.rhs.subList(position - count, position);
 	}
 
 	final ASymbol getExpectedNextSymbol() {

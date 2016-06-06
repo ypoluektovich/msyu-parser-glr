@@ -19,38 +19,52 @@ import java.util.Set;
 public final class Grammar extends GrammarSeed {
 
 	private final Map<NonTerminal, NonTerminalData> precomputedNonTerminalData;
-	final Set<NonTerminal> skippableSymbols;
+	final Set<ASymbol> skippableSymbols;
+	final Set<ASymbol> fillableSymbols;
+	private final Set<Item> completableItems;
 
 	Grammar(GrammarSeed seed) {
 		super(
 				CopySet.immutableHash(seed.terminals),
 				CopyMap.immutableHashV(seed.nonTerminals, CopySet::immutableHash)
 		);
-		Set<NonTerminal> skippableSymbols = new HashSet<>();
-		this.precomputedNonTerminalData = precomputeNonTerminalData(this, skippableSymbols);
+		Map<NonTerminal, NonTerminalData> precomputedNonTerminalData = CopyMap.hashV(nonTerminals, __ -> new NonTerminalData());
+		Set<ASymbol> skippableSymbols = new HashSet<>();
+		Set<ASymbol> fillableSymbols = new HashSet<>();
+		Set<Item> completableItems = new HashSet<>();
+		precomputeNonTerminalData(this, precomputedNonTerminalData, skippableSymbols, fillableSymbols, completableItems);
+		this.precomputedNonTerminalData = CopyMap.immutableHashV(precomputedNonTerminalData, NonTerminalData::new);
 		this.skippableSymbols = Collections.unmodifiableSet(skippableSymbols);
+		this.fillableSymbols = Collections.unmodifiableSet(fillableSymbols);
+		this.completableItems = Collections.unmodifiableSet(completableItems);
 	}
 
 	private static final class NonTerminalData {
 
 		final Collection<Item> itemsInitializedByThis;
-		final Set<Item> initialItems;
-		final Set<NonTerminal> initialNonTerminals;
+		final Set<Item> allInitialItems;
+		final Set<NonTerminal> allInitialNonTerminals;
 
 		NonTerminalData() {
 			itemsInitializedByThis = new HashSet<>();
-			initialItems = new HashSet<>();
-			initialNonTerminals = new HashSet<>();
+			allInitialItems = new HashSet<>();
+			allInitialNonTerminals = new HashSet<>();
 		}
 
 		NonTerminalData(NonTerminalData other) {
 			itemsInitializedByThis = CopyList.immutable(other.itemsInitializedByThis);
-			initialItems = CopySet.immutableHash(other.initialItems);
-			initialNonTerminals = CopySet.immutableHash(other.initialNonTerminals);
+			allInitialItems = CopySet.immutableHash(other.allInitialItems);
+			allInitialNonTerminals = CopySet.immutableHash(other.allInitialNonTerminals);
 		}
 	}
 
-	private static Map<NonTerminal, NonTerminalData> precomputeNonTerminalData(GrammarSeed seed, Set<NonTerminal> skippableSymbols) {
+	private static void precomputeNonTerminalData(
+			GrammarSeed seed,
+			Map<NonTerminal, NonTerminalData> precomputedNonTerminalData,
+			Set<ASymbol> skippableSymbols,
+			Set<ASymbol> fillableSymbols,
+			Set<Item> completableItems
+	) {
 		abstract class ACheck implements Runnable {
 			final Item item;
 
@@ -59,9 +73,9 @@ public final class Grammar extends GrammarSeed {
 			}
 		}
 
-		Map<ASymbol, Boolean> isSymbolSkippable = new HashMap<>();
 		{
 			Queue<ACheck> checksQueue = new ArrayDeque<>();
+			Map<ASymbol, Boolean> isSymbolSkippable = new HashMap<>();
 			Map<ASymbol, List<ACheck>> waitingChecksByDependency = new HashMap<>();
 			Map<NonTerminal, Set<Production>> remainingProductionsByLHS = new HashMap<>();
 
@@ -118,10 +132,10 @@ public final class Grammar extends GrammarSeed {
 			}
 		}
 
-		Map<ASymbol, Boolean> isSymbolFillable = new HashMap<>();
 		Set<Production> fillableProductions = new HashSet<>();
 		{
 			Queue<ACheck> checksQueue = new ArrayDeque<>();
+			Map<ASymbol, Boolean> isSymbolFillable = new HashMap<>();
 			Map<ASymbol, List<ACheck>> waitingChecksByDependency = new HashMap<>();
 			Map<NonTerminal, Set<Production>> remainingProductionsByLHS = new HashMap<>();
 
@@ -137,6 +151,7 @@ public final class Grammar extends GrammarSeed {
 						if (item.production.rhs.stream().anyMatch(isSymbolFillable::containsKey)) {
 							fillableProductions.add(item.production);
 							isSymbolFillable.put(lhs, true);
+							fillableSymbols.add(lhs);
 							remainingProductionsByLHS.get(lhs).clear();
 							requeue(lhs);
 						} else {
@@ -148,7 +163,7 @@ public final class Grammar extends GrammarSeed {
 						Boolean nextSymbolFillable = isSymbolFillable.get(nextSymbol);
 						if (nextSymbolFillable == null) {
 							waitingChecksByDependency.computeIfAbsent(nextSymbol, __ -> new ArrayList<ACheck>()).add(this);
-						} else if (nextSymbolFillable || isSymbolSkippable.getOrDefault(nextSymbol, false)) {
+						} else if (nextSymbolFillable || skippableSymbols.contains(nextSymbol)) {
 							checksQueue.add(new FillableCheck(item.shift()));
 						} else {
 							// production is not fillable - can neither fill nor skip a symbol
@@ -175,6 +190,7 @@ public final class Grammar extends GrammarSeed {
 			}
 			for (Terminal terminal : seed.terminals) {
 				isSymbolFillable.put(terminal, true);
+				fillableSymbols.add(terminal);
 			}
 			for (Map.Entry<NonTerminal, Set<Production>> symbolAndProductions : seed.nonTerminals.entrySet()) {
 				remainingProductionsByLHS.put(symbolAndProductions.getKey(), new HashSet<>(symbolAndProductions.getValue()));
@@ -190,7 +206,6 @@ public final class Grammar extends GrammarSeed {
 
 		// todo: warn about unfillable productions? warn about those we couldn't determine?
 
-		Map<NonTerminal, NonTerminalData> buildingData = CopyMap.hashV(seed.nonTerminals, __ -> new NonTerminalData());
 		{
 			abstract class Signal<P> {
 				final NonTerminal dst;
@@ -206,6 +221,32 @@ public final class Grammar extends GrammarSeed {
 				abstract Collection<P> getDestinationCollection(NonTerminalData dstData);
 				abstract Signal<P> propagate(NonTerminal newDst);
 			}
+			final class InitialItemSignal extends Signal<Item> {
+				InitialItemSignal(NonTerminal dst, Item payload) {
+					super(dst, payload);
+				}
+				@Override
+				final Collection<Item> getDestinationCollection(NonTerminalData dstData) {
+					return dstData.allInitialItems;
+				}
+				@Override
+				final InitialItemSignal propagate(NonTerminal newDst) {
+					return new InitialItemSignal(newDst, payload);
+				}
+			}
+			final class InitialNonTerminalSignal extends Signal<NonTerminal> {
+				InitialNonTerminalSignal(NonTerminal dst, NonTerminal payload) {
+					super(dst, payload);
+				}
+				@Override
+				final Collection<NonTerminal> getDestinationCollection(NonTerminalData dstData) {
+					return dstData.allInitialNonTerminals;
+				}
+				@Override
+				final InitialNonTerminalSignal propagate(NonTerminal newDst) {
+					return new InitialNonTerminalSignal(newDst, payload);
+				}
+			}
 			Queue<Signal> signalQueue = new ArrayDeque<>();
 			Map<NonTerminal, Set<NonTerminal>> symbolsInitializedByKey = CopyMap.hashV(seed.nonTerminals, __ -> new HashSet<>());
 			for (Map.Entry<NonTerminal, Set<Production>> symbolAndProductions : seed.nonTerminals.entrySet()) {
@@ -214,76 +255,60 @@ public final class Grammar extends GrammarSeed {
 					if (!fillableProductions.contains(production)) {
 						continue;
 					}
+
 					List<ASymbol> rhs = production.rhs;
-					if (rhs.isEmpty()) {
-						continue;
+
+					{
+						Item item = production.items.get(rhs.size());
+						do {
+							completableItems.add(item);
+							item = production.items.get(item.position - 1);
+						} while (skippableSymbols.contains(item.getExpectedNextSymbol()));
 					}
+
 					for (int i = 0; i < rhs.size(); ++i) {
 						ASymbol initial = rhs.get(i);
 						Item item = production.items.get(i);
 						if (initial instanceof Terminal) {
-							final class InitialItemSignal extends Signal<Item> {
-								InitialItemSignal(NonTerminal dst, Item payload) {
-									super(dst, payload);
-								}
-								@Override
-								final Collection<Item> getDestinationCollection(NonTerminalData dstData) {
-									return dstData.initialItems;
-								}
-								@Override
-								final InitialItemSignal propagate(NonTerminal newDst) {
-									return new InitialItemSignal(newDst, payload);
-								}
-							}
 							signalQueue.add(new InitialItemSignal(lhs, item));
 						} else if (initial instanceof NonTerminal) {
-							if (isSymbolFillable.getOrDefault(initial, false)) {
-								final class InitialNonTerminalSignal extends Signal<NonTerminal> {
-									InitialNonTerminalSignal(NonTerminal dst, NonTerminal payload) {
-										super(dst, payload);
-									}
-									@Override
-									final Collection<NonTerminal> getDestinationCollection(NonTerminalData dstData) {
-										return dstData.initialNonTerminals;
-									}
-									@Override
-									final InitialNonTerminalSignal propagate(NonTerminal newDst) {
-										return new InitialNonTerminalSignal(newDst, payload);
-									}
-								}
+							if (fillableSymbols.contains(initial)) {
 								signalQueue.add(new InitialNonTerminalSignal(lhs, (NonTerminal) initial));
-								buildingData.get(initial).itemsInitializedByThis.add(item);
+								precomputedNonTerminalData.get(initial).itemsInitializedByThis.add(item);
 								symbolsInitializedByKey.get(initial).add(lhs);
 							}
 						}
-						if (!isSymbolSkippable.getOrDefault(initial, false)) {
+						if (!skippableSymbols.contains(initial)) {
 							break;
 						}
 					}
 				}
 			}
 			for (Signal<?> signal; (signal = signalQueue.poll()) != null; ) {
-				if (signal.applyTo(buildingData.get(signal.dst))) {
+				if (signal.applyTo(precomputedNonTerminalData.get(signal.dst))) {
 					for (NonTerminal newDst : symbolsInitializedByKey.get(signal.dst)) {
 						signalQueue.add(signal.propagate(newDst));
 					}
 				}
 			}
 		}
-		return CopyMap.immutableHashV(buildingData, NonTerminalData::new);
 	}
 
 
-	final Collection<Item> getInitializingItemsOf(NonTerminal symbol) {
-		return precomputedNonTerminalData.get(symbol).initialItems;
+	final Collection<Item> getAllInitializingItemsOf(NonTerminal symbol) {
+		return precomputedNonTerminalData.get(symbol).allInitialItems;
 	}
 
-	final Collection<NonTerminal> getInitializingNonTerminalsOf(NonTerminal symbol) {
-		return precomputedNonTerminalData.get(symbol).initialNonTerminals;
+	final Collection<NonTerminal> getAllInitializingNonTerminalsOf(NonTerminal symbol) {
+		return precomputedNonTerminalData.get(symbol).allInitialNonTerminals;
 	}
 
 	final Collection<Item> getItemsInitializedBy(NonTerminal symbol) {
 		return precomputedNonTerminalData.get(symbol).itemsInitializedByThis;
+	}
+
+	final boolean isCompletable(Item item) {
+		return completableItems.contains(item);
 	}
 
 

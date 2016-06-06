@@ -12,18 +12,17 @@ import java.util.Set;
 public final class Sapling {
 
 	final Grammar grammar;
-	final Set<NonTerminal> goals;
 	final List<Item> initialItems;
 	final Set<NonTerminal> allowedBlindReductionNonTerminals;
 
 	Sapling(Grammar grammar, Collection<NonTerminal> goals) {
 		this.grammar = grammar;
-		this.goals = CopySet.immutableHash(goals);
+		Set<NonTerminal> goalsSet = CopySet.immutableHash(goals);
 		Set<Item> initialItems = new HashSet<>();
-		Set<NonTerminal> allowedBlindReductionNonTerminals = new HashSet<>(this.goals);
-		for (NonTerminal goal : this.goals) {
-			initialItems.addAll(grammar.getInitializingItemsOf(goal));
-			allowedBlindReductionNonTerminals.addAll(grammar.getInitializingNonTerminalsOf(goal));
+		Set<NonTerminal> allowedBlindReductionNonTerminals = new HashSet<>(goalsSet);
+		for (NonTerminal goal : goalsSet) {
+			initialItems.addAll(grammar.getAllInitializingItemsOf(goal));
+			allowedBlindReductionNonTerminals.addAll(grammar.getAllInitializingNonTerminalsOf(goal));
 		}
 		this.initialItems = CopyList.immutable(initialItems);
 		this.allowedBlindReductionNonTerminals = Collections.unmodifiableSet(allowedBlindReductionNonTerminals);

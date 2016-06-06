@@ -5,8 +5,8 @@ import org.msyu.javautil.cf.WrapList;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Queue;
 import java.util.Set;
 
@@ -22,8 +22,7 @@ public final class State {
 
 	private State(Sapling sapling, GlrCallback callback) {
 		this.sapling = sapling;
-		Object initialBranchId = callback.newBranchId();
-		callback.shift(null, initialBranchId);
+		Object initialBranchId = callback.shift(null, Collections.emptyList());
 		List<ItemStack> stacks = new ArrayList<>();
 		for (Item item : sapling.initialItems) {
 			stacks.add(new ItemStack(initialBranchId, item.position, item, null));
@@ -43,9 +42,7 @@ public final class State {
 			List<ItemStack> shiftedStacks = new ArrayList<>();
 			for (ItemStack oldStack : previousState.stacks) {
 				if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
-					Object shiftedBranchId = callback.newBranchId();
-					callback.shift(oldStack.id, shiftedBranchId);
-					shiftedStacks.add(oldStack.shift(shiftedBranchId));
+					shiftedStacks.add(oldStack.shift(callback));
 				}
 			}
 			reduce(shiftedStacks, stacks, callback);
@@ -54,41 +51,55 @@ public final class State {
 		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
 	}
 
-	private void reduce(List<ItemStack> oldStacks, List<ItemStack> newStacks, GlrCallback callback) {
-		Queue<ItemStack> stacksQueue = new ArrayDeque<>(oldStacks);
-		for (ItemStack stack; (stack = stacksQueue.poll()) != null; ) {
+	private void reduce(List<ItemStack> shiftedStacks, List<ItemStack> newStacks, GlrCallback callback) {
+		Queue<ItemStack> reductionQueue = new ArrayDeque<>(shiftedStacks);
+		Queue<ItemStack> expansionQueue = new ArrayDeque<>();
+
+		for (ItemStack stack; (stack = reductionQueue.poll()) != null; ) {
 			if (!stack.item.isFinished()) {
-				newStacks.add(stack);
+				if (sapling.grammar.isCompletable(stack.item)) {
+					reductionQueue.add(stack.skipToEnd(callback));
+				}
+				expansionQueue.add(stack);
 				continue;
 			}
 			ItemStack nextInStack = stack.nextInStack;
 			Production completedProduction = stack.item.production;
 			NonTerminal completedSymbol = completedProduction.lhs;
 
-			Object reducedBranchId = callback.newBranchId();
-			callback.reduce(stack.id, completedProduction, stack.prependedEmptySymbols, reducedBranchId);
+			Object reducedBranchId = callback.reduce(stack.id, completedProduction);
 
 			for (Item newItem : sapling.grammar.getItemsInitializedBy(completedSymbol)) {
 				if (itemIsGoodAsBlindReductionTarget(newItem, nextInStack)) {
-					stacksQueue.add(new ItemStack(reducedBranchId, newItem.position, newItem.shift(), nextInStack));
+					reductionQueue.add(stack.finishBlindReduction(callback, reducedBranchId, newItem));
 				}
 			}
 
 			if (nextInStack != null && nextInStack.item.getExpectedNextSymbol().equals(completedSymbol)) {
-				stacksQueue.add(nextInStack.shift(reducedBranchId));
+				reductionQueue.add(nextInStack.finishGuidedReduction(callback, reducedBranchId));
 			}
 		}
 
-		for (ListIterator<ItemStack> iterator = newStacks.listIterator(); iterator.hasNext(); ) {
-			ItemStack stack = iterator.next();
+		for (ItemStack stack; (stack = expansionQueue.poll()) != null; ) {
 			Item item = stack.item;
-			if (item.getExpectedNextSymbol() instanceof NonTerminal) {
-				iterator.remove();
-				NonTerminal nextSymbol = (NonTerminal) item.getExpectedNextSymbol();
-				for (Item nextItem : sapling.grammar.getInitializingItemsOf(nextSymbol)) {
-					iterator.add(new ItemStack(stack.id, nextItem.position, nextItem, stack.copyWithNoId()));
+			do {
+				ASymbol nextSymbol = item.getExpectedNextSymbol();
+				if (sapling.grammar.fillableSymbols.contains(nextSymbol)) {
+					stack = stack.skipTo(item);
+					if (nextSymbol instanceof Terminal) {
+						newStacks.add(stack);
+					} else if (nextSymbol instanceof NonTerminal) {
+						NonTerminal nextNonTerminal = (NonTerminal) nextSymbol;
+						for (Item nextItem : sapling.grammar.getAllInitializingItemsOf(nextNonTerminal)) {
+							newStacks.add(new ItemStack(stack.id, nextItem.position, nextItem, stack.copyWithNoId()));
+						}
+					}
 				}
-			}
+				if (!sapling.grammar.skippableSymbols.contains(nextSymbol)) {
+					break;
+				}
+				item = item.shift();
+			} while (!item.isFinished());
 		}
 	}
 
@@ -96,7 +107,7 @@ public final class State {
 		boolean itemLhsInitializesNextInStack =
 				nextInStack == null ||
 						sapling.grammar
-								.getInitializingNonTerminalsOf((NonTerminal) nextInStack.item.getExpectedNextSymbol())
+								.getAllInitializingNonTerminalsOf((NonTerminal) nextInStack.item.getExpectedNextSymbol())
 								.contains(item.production.lhs);
 		return itemLhsInitializesNextInStack &&
 				sapling.allowedBlindReductionNonTerminals.contains(item.production.lhs);

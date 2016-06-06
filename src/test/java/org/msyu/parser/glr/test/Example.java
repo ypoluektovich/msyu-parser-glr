@@ -9,7 +9,6 @@ import org.msyu.parser.glr.Terminal;
 import org.testng.annotations.Test;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 
@@ -56,7 +55,7 @@ public class Example extends ReachTheGoalTestBase {
 		state = callback.advance(state, num);
 		state = callback.advance(state, eof);
 
-		verify(callback).reduce(any(), eq(goalProduction), anyInt(), any());
+		verify(callback).reduce(any(), eq(goalProduction));
 	}
 
 }
