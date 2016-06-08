@@ -72,12 +72,20 @@ class LoggingCallback implements GlrCallback {
 
 	@Override
 	public Object insert(Object oldBranch, List<ASymbol> emptySymbols) {
-		Deque<ASymbol> newDeque = new ArrayDeque<>(dequeByBranch.get(oldBranch));
-		ASymbol popped = newDeque.removeLast();
-		newDeque.addAll(emptySymbols);
-		newDeque.add(popped);
-		Object newBranch = newBranchId();
-		dequeByBranch.put(newBranch, newDeque);
+		Deque<ASymbol> oldDeque = dequeByBranch.get(oldBranch);
+		Object newBranch;
+		Deque<ASymbol> newDeque;
+		if (emptySymbols.isEmpty()) {
+			newBranch = oldBranch;
+			newDeque = oldDeque;
+		} else {
+			newDeque = new ArrayDeque<>(oldDeque);
+			ASymbol popped = newDeque.removeLast();
+			newDeque.addAll(emptySymbols);
+			newDeque.add(popped);
+			newBranch = newBranchId();
+			dequeByBranch.put(newBranch, newDeque);
+		}
 		System.out.printf("insert(%s, %s) -> %s %s\n", oldBranch, emptySymbols, newBranch, newDeque);
 		return newBranch;
 	}
