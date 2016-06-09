@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public final class Grammar extends GrammarSeed {
 
@@ -226,6 +227,8 @@ public final class Grammar extends GrammarSeed {
 
 		// todo: warn about unfillable productions? warn about those we couldn't determine?
 
+		// This will be needed for infinite reduction cycle detection.
+		Map<NonTerminal, Set<NonTerminal>> singleSymbolCompletablesByCompleting = new HashMap<>();
 		{
 			abstract class Signal<P> {
 				final NonTerminal dst;
@@ -278,27 +281,36 @@ public final class Grammar extends GrammarSeed {
 
 					List<ASymbol> rhs = production.rhs;
 
+					int minimalSingleFillableSymbolPosition;
 					{
 						Item item = production.items.get(rhs.size());
 						do {
 							completableItems.add(item);
+							minimalSingleFillableSymbolPosition = item.position;
 							if (item.position == 0) {
 								break;
 							}
 							item = production.items.get(item.position - 1);
 						} while (skippableSymbols.contains(item.getExpectedNextSymbol()));
+						minimalSingleFillableSymbolPosition -= 1;
 					}
 
 					for (int i = 0; i < rhs.size(); ++i) {
 						ASymbol initial = rhs.get(i);
+						boolean initialIsFillable = fillableSymbols.contains(initial);
 						Item item = production.items.get(i);
 						if (initial instanceof Terminal) {
 							signalQueue.add(new InitialItemSignal(lhs, item));
 						} else if (initial instanceof NonTerminal) {
-							if (fillableSymbols.contains(initial)) {
+							if (initialIsFillable) {
 								signalQueue.add(new InitialNonTerminalSignal(lhs, (NonTerminal) initial));
 								precomputedNonTerminalData.get(initial).itemsInitializedByThis.add(item);
 								symbolsInitializedByKey.get(initial).add(lhs);
+								if (i >= minimalSingleFillableSymbolPosition) {
+									singleSymbolCompletablesByCompleting
+											.computeIfAbsent((NonTerminal) initial, __ -> new HashSet<>())
+											.add(lhs);
+								}
 							}
 						}
 						if (!skippableSymbols.contains(initial)) {
@@ -313,6 +325,33 @@ public final class Grammar extends GrammarSeed {
 						signalQueue.add(signal.propagate(newDst));
 					}
 				}
+			}
+		}
+
+		{
+			// Simple DFS completes the search for infinite reduction cycles.
+			Set<NonTerminal> visited = new HashSet<>();
+			Set<NonTerminal> stack = new HashSet<>();
+			Consumer<NonTerminal> visitor = new Consumer<NonTerminal>() {
+				@Override
+				public void accept(NonTerminal symbol) {
+					if (visited.contains(symbol)) {
+						if (stack.contains(symbol)) {
+							throw new GrammarException("infinite reduction cycle found, starting with symbol " + symbol);
+						} else {
+							return;
+						}
+					}
+					visited.add(symbol);
+					stack.add(symbol);
+					for (NonTerminal nextSymbol : singleSymbolCompletablesByCompleting.getOrDefault(symbol, Collections.emptySet())) {
+						this.accept(nextSymbol);
+					}
+					stack.remove(symbol);
+				}
+			};
+			for (NonTerminal symbol : singleSymbolCompletablesByCompleting.keySet()) {
+				visitor.accept(symbol);
 			}
 		}
 	}
