@@ -1,10 +1,13 @@
 package org.msyu.parser.glr.test;
 
+import org.msyu.parser.glr.Grammar;
 import org.msyu.parser.glr.GrammarBuilder;
 import org.msyu.parser.glr.GrammarException;
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Terminal;
 import org.testng.annotations.Test;
+
+import static org.testng.Assert.assertNotNull;
 
 public class InfiniteReduction {
 
@@ -78,6 +81,26 @@ public class InfiniteReduction {
 		gb.addProduction(I2, G);
 
 		gb.build();
+	}
+
+	@Test
+	public void unfillable() {
+		// unlike fillable cycles, this should work
+		GrammarBuilder gb = new GrammarBuilder();
+
+		Terminal a = gb.addTerminal("a");
+
+		NonTerminal A = gb.addNonTerminal("A");
+		NonTerminal B = gb.addNonTerminal("B");
+		NonTerminal C = gb.addNonTerminal("C");
+
+		gb.addProduction(A, B);
+		gb.addProduction(B, C);
+		gb.addProduction(C, A);
+		gb.addProduction(C);
+
+		Grammar grammar = gb.build();
+		assertNotNull(grammar);
 	}
 
 }
