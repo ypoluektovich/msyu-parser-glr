@@ -1,7 +1,6 @@
 package org.msyu.parser.glr.test;
 
 import org.msyu.parser.glr.NonTerminal;
-import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
 import org.testng.annotations.Test;
 
@@ -35,9 +34,6 @@ public class AmbiguousGrammar extends ReachTheGoalTestBase {
 
 	@Test
 	public void run() {
-		State state = State.initializeFrom(sapling, callback);
-		callback.completeIteration(state);
-
 		state = callback.advance(state, prefix);
 		state = callback.advance(state, middle);
 		state = callback.advance(state, suffix);

@@ -5,7 +5,6 @@ import org.msyu.javautil.cf.WrapList;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
@@ -16,16 +15,15 @@ public final class State {
 	private final List<ItemStack> stacks;
 	private final Set<Object> stackIds;
 
-	public static State initializeFrom(Sapling sapling, GlrCallback callback) {
-		return new State(sapling, callback);
+	public static State initializeFrom(Sapling sapling) {
+		return new State(sapling);
 	}
 
-	private State(Sapling sapling, GlrCallback callback) {
+	private State(Sapling sapling) {
 		this.sapling = sapling;
-		Object initialBranchId = callback.shift(null, Collections.emptyList());
 		List<ItemStack> stacks = new ArrayList<>();
 		for (Item item : sapling.initialItems) {
-			stacks.add(new ItemStack(initialBranchId, item.position, item, null));
+			stacks.add(new ItemStack(null, item.position, item, null));
 		}
 		this.stacks = WrapList.immutable(stacks);
 		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);

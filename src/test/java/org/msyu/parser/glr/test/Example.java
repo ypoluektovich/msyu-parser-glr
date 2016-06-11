@@ -1,7 +1,6 @@
 package org.msyu.parser.glr.test;
 
 import org.msyu.parser.glr.NonTerminal;
-import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
 import org.testng.annotations.Test;
 
@@ -38,9 +37,6 @@ public class Example extends ReachTheGoalTestBase {
 
 	@Test
 	public void example() {
-		State state = State.initializeFrom(sapling, callback);
-		callback.completeIteration(state);
-
 		state = callback.advance(state, id);
 		state = callback.advance(state, times);
 		state = callback.advance(state, num);
