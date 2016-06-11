@@ -1,4 +1,4 @@
-package org.msyu.parser.glr.test;
+package org.msyu.parser.glr.grammartest;
 
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Terminal;
@@ -9,33 +9,32 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-public class AmbiguousGrammar extends ReachTheGoalTestBase {
+public class SkippableSymbolAtTheEnd extends ReachTheGoalTestBase {
 
 	Terminal prefix = gb.addTerminal("prefix");
-	Terminal middle = gb.addTerminal("middle");
 	Terminal suffix = gb.addTerminal("suffix");
 
-	NonTerminal m1 = gb.addNonTerminal("M1");
-	NonTerminal m2 = gb.addNonTerminal("M2");
-	NonTerminal m = gb.addNonTerminal("M");
+	NonTerminal skippable = gb.addNonTerminal("Skippable");
 
 	{
 		goal = gb.addNonTerminal("Goal");
 
-		gb.addProduction(m1, middle);
+		gb.addProduction(skippable);
+		gb.addProduction(skippable, suffix);
 
-		gb.addProduction(m2, middle);
-
-		gb.addProduction(m, m1);
-		gb.addProduction(m, m2);
-
-		goalProduction = gb.addProduction(goal, prefix, m, suffix);
+		goalProduction = gb.addProduction(goal, prefix, skippable);
 	}
 
 	@Test
-	public void run() {
+	public void skipped() {
 		state = callback.advance(state, prefix);
-		state = callback.advance(state, middle);
+
+		verify(callback).reduce(any(), eq(goalProduction));
+	}
+
+	@Test
+	public void filled() {
+		state = callback.advance(state, prefix);
 		state = callback.advance(state, suffix);
 
 		verify(callback, times(2)).reduce(any(), eq(goalProduction));

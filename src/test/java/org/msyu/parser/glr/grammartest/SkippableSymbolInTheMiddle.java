@@ -1,4 +1,4 @@
-package org.msyu.parser.glr.test;
+package org.msyu.parser.glr.grammartest;
 
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Terminal;
@@ -6,12 +6,12 @@ import org.testng.annotations.Test;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-public class SkippableSymbolAtTheEnd extends ReachTheGoalTestBase {
+public class SkippableSymbolInTheMiddle extends ReachTheGoalTestBase {
 
 	Terminal prefix = gb.addTerminal("prefix");
+	Terminal middle = gb.addTerminal("middle");
 	Terminal suffix = gb.addTerminal("suffix");
 
 	NonTerminal skippable = gb.addNonTerminal("Skippable");
@@ -20,14 +20,15 @@ public class SkippableSymbolAtTheEnd extends ReachTheGoalTestBase {
 		goal = gb.addNonTerminal("Goal");
 
 		gb.addProduction(skippable);
-		gb.addProduction(skippable, suffix);
+		gb.addProduction(skippable, middle);
 
-		goalProduction = gb.addProduction(goal, prefix, skippable);
+		goalProduction = gb.addProduction(goal, prefix, skippable, suffix);
 	}
 
 	@Test
 	public void skipped() {
 		state = callback.advance(state, prefix);
+		state = callback.advance(state, suffix);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}
@@ -35,9 +36,10 @@ public class SkippableSymbolAtTheEnd extends ReachTheGoalTestBase {
 	@Test
 	public void filled() {
 		state = callback.advance(state, prefix);
+		state = callback.advance(state, middle);
 		state = callback.advance(state, suffix);
 
-		verify(callback, times(2)).reduce(any(), eq(goalProduction));
+		verify(callback).reduce(any(), eq(goalProduction));
 	}
 
 }

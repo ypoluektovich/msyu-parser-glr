@@ -1,14 +1,15 @@
-package org.msyu.parser.glr.test;
+package org.msyu.parser.glr.examples;
 
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Terminal;
+import org.msyu.parser.glr.grammartest.ReachTheGoalTestBase;
 import org.testng.annotations.Test;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 
-public class Example extends ReachTheGoalTestBase {
+public class DragonBookExample extends ReachTheGoalTestBase {
 
 	Terminal id = gb.addTerminal("id");
 	Terminal num = gb.addTerminal("num");

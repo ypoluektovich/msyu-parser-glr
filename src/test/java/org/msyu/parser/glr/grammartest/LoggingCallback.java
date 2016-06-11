@@ -1,4 +1,4 @@
-package org.msyu.parser.glr.test;
+package org.msyu.parser.glr.grammartest;
 
 import org.msyu.javautil.cf.NoOp;
 import org.msyu.parser.glr.ASymbol;
@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.msyu.javautil.cf.Iterators.concat;
 import static org.msyu.javautil.cf.Iterators.singletonIterator;
 
-class LoggingCallback implements GlrCallback {
+public class LoggingCallback implements GlrCallback {
 
 	private final TreeStack<ASymbol> stack = new TreeStack<>();
 
@@ -27,7 +27,7 @@ class LoggingCallback implements GlrCallback {
 
 	private Terminal symbol;
 
-	State advance(State state, Terminal symbol) {
+	public State advance(State state, Terminal symbol) {
 		System.out.printf("iteration: %s\n", symbol);
 		this.symbol = symbol;
 

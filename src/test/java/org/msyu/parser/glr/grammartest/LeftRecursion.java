@@ -1,4 +1,4 @@
-package org.msyu.parser.glr.test;
+package org.msyu.parser.glr.grammartest;
 
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Terminal;

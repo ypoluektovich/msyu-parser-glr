@@ -1,4 +1,4 @@
-package org.msyu.parser.glr.test;
+package org.msyu.parser.glr.grammartest;
 
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -13,19 +13,19 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
-abstract class ReachTheGoalTestBase extends SingleGrammarTestBase {
+public abstract class ReachTheGoalTestBase extends SingleGrammarTestBase {
 
-	GrammarBuilder gb = new GrammarBuilder();
+	protected GrammarBuilder gb = new GrammarBuilder();
 
-	NonTerminal goal;
+	protected NonTerminal goal;
 
-	ProductionHandle goalProduction;
+	protected ProductionHandle goalProduction;
 
-	Sapling sapling;
+	protected Sapling sapling;
 
-	@Spy LoggingCallback callback = new LoggingCallback();
+	@Spy protected LoggingCallback callback = new LoggingCallback();
 
-	State state;
+	protected State state;
 
 	@BeforeClass
 	public void finishRTGInit() {
