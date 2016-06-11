@@ -21,7 +21,7 @@ public final class TreeStack<E> {
 			private Branch<E> branch;
 			private E element;
 
-			private boolean advance() {
+			final boolean advance() {
 				int position = 1;
 				while (true) {
 					boolean endOfBranch = position == branch.elements.size();
@@ -34,10 +34,11 @@ public final class TreeStack<E> {
 						return false;
 					}
 					element = elements.next();
-					if (!Objects.equals(branch.elements.get(position++), element)) {
+					if (!Objects.equals(branch.elements.get(position), element)) {
 						branch = grow(split(branch, position), element, elements);
 						return true;
 					}
+					++position;
 				}
 			}
 		}
