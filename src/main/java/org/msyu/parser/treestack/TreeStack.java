@@ -139,4 +139,19 @@ public final class TreeStack<E> {
 		}
 	}
 
+	final void merge(Collection<Object> retainIds) {
+		for (Iterator<Branch<E>> iterator = branchById.values().iterator(); iterator.hasNext(); ) {
+			Branch<E> branch = iterator.next();
+			if (branch.joint.size() != 1 || retainIds.contains(branch)) {
+				continue;
+			}
+			Branch<E> nextBranch = branch.joint.values().iterator().next();
+			nextBranch.elements.addAll(0, branch.elements);
+			if (branch.parent != null) {
+				branch.parent.joint.put(branch.elements.get(0), nextBranch);
+			}
+			iterator.remove();
+		}
+	}
+
 }
