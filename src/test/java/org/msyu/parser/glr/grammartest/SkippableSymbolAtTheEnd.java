@@ -9,7 +9,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-public class SkippableSymbolAtTheEnd extends ReachTheGoalTestBase {
+public class SkippableSymbolAtTheEnd extends ReachTheGoalTestBase<Terminal> {
 
 	Terminal prefix = gb.addTerminal("prefix");
 	Terminal suffix = gb.addTerminal("suffix");
@@ -23,6 +23,8 @@ public class SkippableSymbolAtTheEnd extends ReachTheGoalTestBase {
 		gb.addProduction(skippable, suffix);
 
 		goalProduction = gb.addProduction(goal, prefix, skippable);
+
+		callback = new LoggingCallback();
 	}
 
 	@Test

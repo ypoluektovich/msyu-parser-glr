@@ -8,7 +8,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 
-public class SkippableSymbolInTheMiddle extends ReachTheGoalTestBase {
+public class SkippableSymbolInTheMiddle extends ReachTheGoalTestBase<Terminal> {
 
 	Terminal prefix = gb.addTerminal("prefix");
 	Terminal middle = gb.addTerminal("middle");
@@ -23,6 +23,8 @@ public class SkippableSymbolInTheMiddle extends ReachTheGoalTestBase {
 		gb.addProduction(skippable, middle);
 
 		goalProduction = gb.addProduction(goal, prefix, skippable, suffix);
+
+		callback = new LoggingCallback();
 	}
 
 	@Test

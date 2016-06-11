@@ -13,7 +13,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
-public abstract class ReachTheGoalTestBase extends SingleGrammarTestBase {
+public abstract class ReachTheGoalTestBase<T> extends SingleGrammarTestBase {
 
 	protected GrammarBuilder gb = new GrammarBuilder();
 
@@ -23,7 +23,7 @@ public abstract class ReachTheGoalTestBase extends SingleGrammarTestBase {
 
 	protected Sapling sapling;
 
-	@Spy protected LoggingCallback callback = new LoggingCallback();
+	@Spy protected ASymbolTrackingCallback<T> callback;
 
 	protected State state;
 

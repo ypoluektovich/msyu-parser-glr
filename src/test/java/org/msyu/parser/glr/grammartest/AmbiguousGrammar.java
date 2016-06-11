@@ -9,7 +9,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-public class AmbiguousGrammar extends ReachTheGoalTestBase {
+public class AmbiguousGrammar extends ReachTheGoalTestBase<Terminal> {
 
 	Terminal prefix = gb.addTerminal("prefix");
 	Terminal middle = gb.addTerminal("middle");
@@ -30,6 +30,8 @@ public class AmbiguousGrammar extends ReachTheGoalTestBase {
 		gb.addProduction(m, m2);
 
 		goalProduction = gb.addProduction(goal, prefix, m, suffix);
+
+		callback = new LoggingCallback();
 	}
 
 	@Test

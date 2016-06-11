@@ -2,7 +2,6 @@ package org.msyu.parser.glr.grammartest;
 
 import org.msyu.javautil.cf.NoOp;
 import org.msyu.parser.glr.ASymbol;
-import org.msyu.parser.glr.GlrCallback;
 import org.msyu.parser.glr.ProductionHandle;
 import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
@@ -18,28 +17,31 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.msyu.javautil.cf.Iterators.concat;
 import static org.msyu.javautil.cf.Iterators.singletonIterator;
 
-public class LoggingCallback implements GlrCallback {
+public class LoggingCallback extends ASymbolTrackingCallback<Terminal> {
 
 	private final TreeStack<ASymbol> stack = new TreeStack<>();
 
 	private int indexSource = 0;
 	private final Map<Object, Integer> indexByBranch = new HashMap<>();
 
-	private Terminal symbol;
+	@Override
+	protected Terminal symbolByToken(Terminal token) {
+		return token;
+	}
 
+	@Override
 	public State advance(State state, Terminal symbol) {
 		System.out.printf("iteration: %s\n", symbol);
-		this.symbol = symbol;
 
-		state = state.advance(symbol, this);
+		super.advance(state, symbol);
 
 		Set<Object> usedStackIds = state.getUsedStackIds();
-		System.out.println("completed: " + usedStackIds);
 		stack.retain(usedStackIds);
 		stack.merge(usedStackIds);
+
+		System.out.println("completed: " + usedStackIds);
 		System.out.println();
 
-		this.symbol = null;
 		return state;
 	}
 
@@ -51,7 +53,7 @@ public class LoggingCallback implements GlrCallback {
 
 	@Override
 	public Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols) {
-		Object newBranch = stack.push(oldBranch, concat(prependedEmptySymbols.iterator(), singletonIterator(symbol)));
+		Object newBranch = stack.push(oldBranch, concat(prependedEmptySymbols.iterator(), singletonIterator(token)));
 		Integer oldIndex = indexByBranch.get(oldBranch);
 		Integer newIndex = indexByBranch.computeIfAbsent(newBranch, __ -> ++indexSource);
 		System.out.printf("shift(%s, %s) -> %s %s\n", oldIndex, prependedEmptySymbols, newIndex, enumerate(newBranch));
