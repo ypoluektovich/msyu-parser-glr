@@ -11,6 +11,7 @@ final class Branch<E> {
 	Branch<E> parent;
 	final List<E> elements;
 	final Map<E, Branch<E>> joint;
+	final int fullSize;
 
 	Branch(Branch<E> parent, E firstElement, Iterator<E> otherElements) {
 		this.parent = parent;
@@ -20,6 +21,7 @@ final class Branch<E> {
 			elements.add(otherElements.next());
 		}
 		joint = new HashMap<>();
+		fullSize = (parent != null ? parent.fullSize : 0) + elements.size();
 	}
 
 	final Branch<E> grow(E firstElement, Iterator<E> otherElements) {

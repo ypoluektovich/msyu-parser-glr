@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 public final class TreeStack<E> {
 
@@ -73,6 +74,34 @@ public final class TreeStack<E> {
 				return c.branch;
 			}
 		}
+	}
+
+	final Object pop(Object oldId, int count, Consumer<E> sink) {
+		if (oldId == null) {
+			if (count != 0) {
+				throw new IllegalArgumentException("asked to pop non-zero elements from empty stack");
+			}
+			return null;
+		}
+		Branch<E> branch = branchById.get(oldId);
+		if (branch == null) {
+			throw new IllegalArgumentException("asked to pop from nonexistent branch");
+		}
+		if (branch.fullSize < count) {
+			throw new IllegalArgumentException("underflow");
+		}
+		while (count > 0) {
+			int branchSize = branch.elements.size();
+			for (int i = branchSize - 1, m = Math.max(0, branchSize - count); i >= m; --i) {
+				sink.accept(branch.elements.get(i));
+			}
+			if (count < branchSize) {
+				return split(branch, branchSize - count);
+			}
+			count -= branchSize;
+			branch = branch.parent;
+		}
+		return branch;
 	}
 
 	private Branch<E> register(Branch<E> branch) {
