@@ -45,6 +45,17 @@ public class TreeStackPushTest {
 		assertThat(stack.branchById.get(one).elements, is(addedElements));
 	}
 
+	@Test(expectedExceptions = IllegalArgumentException.class)
+	public void pushToNonexistentBranch() {
+		// given
+		TreeStack<Integer> stack = new TreeStack<>();
+		Object one = stack.push(null, singletonList(1).iterator());
+		// when
+		stack.push(new Object(), singletonList(2).iterator());
+		// then
+		// should throw
+	}
+
 	@Test
 	public void addFirstElements() {
 		// given

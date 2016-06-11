@@ -59,6 +59,9 @@ public final class TreeStack<E> {
 			}
 		} else {
 			c.branch = branchById.get(oldId);
+			if (c.branch == null) {
+				throw new IllegalArgumentException("asked to push to nonexistent branch");
+			}
 		}
 		while (true) {
 			Branch<E> nextBranch = c.branch.joint.get(c.element);
