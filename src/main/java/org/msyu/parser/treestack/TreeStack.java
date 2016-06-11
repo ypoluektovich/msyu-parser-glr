@@ -1,9 +1,12 @@
 package org.msyu.parser.treestack;
 
+import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.function.Consumer;
 
 public final class TreeStack<E> {
@@ -115,6 +118,25 @@ public final class TreeStack<E> {
 
 	private Branch<E> split(Branch<E> branch, int position) {
 		return register(branch.splitAt(position));
+	}
+
+	final void retain(Collection<Object> retainIds) {
+		Queue<Branch<E>> removalQueue = new ArrayDeque<>();
+		for (Branch<E> branch : branchById.values()) {
+			if (branch.joint.isEmpty() && !retainIds.contains(branch)) {
+				removalQueue.add(branch);
+			}
+		}
+		for (Branch<E> branch; (branch = removalQueue.poll()) != null; ) {
+			branchById.remove(branch);
+			Branch<E> parent = branch.parent;
+			if (parent != null) {
+				parent.joint.remove(branch.elements.get(0));
+				if (parent.joint.isEmpty() && !retainIds.contains(parent)) {
+					removalQueue.add(parent);
+				}
+			}
+		}
 	}
 
 }
