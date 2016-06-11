@@ -2,6 +2,7 @@ package org.msyu.parser.treestack;
 
 import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -151,6 +152,27 @@ public final class TreeStack<E> {
 				branch.parent.joint.put(branch.elements.get(0), nextBranch);
 			}
 			iterator.remove();
+		}
+	}
+
+	public final void enumerate(Object id, Consumer<E> sink) {
+		Objects.requireNonNull(sink, "asked to enumerate into null sink");
+		if (id == null) {
+			return;
+		}
+		Branch<E> branch = branchById.get(id);
+		if (branch == null) {
+			throw new IllegalArgumentException("asked to enumerate nonexistent branch");
+		}
+		Deque<Branch<E>> branches = new ArrayDeque<>();
+		while (branch != null) {
+			branches.addLast(branch);
+			branch = branch.parent;
+		}
+		while ((branch = branches.pollLast()) != null) {
+			for (E element : branch.elements) {
+				sink.accept(element);
+			}
 		}
 	}
 
