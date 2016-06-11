@@ -13,11 +13,11 @@ public final class TreeStack<E> {
 
 	final Map<Object, Branch<E>> branchById;
 
-	TreeStack() {
+	public TreeStack() {
 		branchById = new HashMap<>();
 	}
 
-	final Object push(Object oldId, Iterator<E> elements) {
+	public final Object push(Object oldId, Iterator<E> elements) {
 		if (!elements.hasNext()) {
 			return oldId;
 		}
@@ -79,7 +79,7 @@ public final class TreeStack<E> {
 		}
 	}
 
-	final Object pop(Object oldId, int count, Consumer<E> sink) {
+	public final Object pop(Object oldId, int count, Consumer<E> sink) {
 		if (oldId == null) {
 			if (count != 0) {
 				throw new IllegalArgumentException("asked to pop non-zero elements from empty stack");
@@ -120,7 +120,7 @@ public final class TreeStack<E> {
 		return register(branch.splitAt(position));
 	}
 
-	final void retain(Collection<Object> retainIds) {
+	public final void retain(Collection<Object> retainIds) {
 		Queue<Branch<E>> removalQueue = new ArrayDeque<>();
 		for (Branch<E> branch : branchById.values()) {
 			if (branch.joint.isEmpty() && !retainIds.contains(branch)) {
@@ -139,7 +139,7 @@ public final class TreeStack<E> {
 		}
 	}
 
-	final void merge(Collection<Object> retainIds) {
+	public final void merge(Collection<Object> retainIds) {
 		for (Iterator<Branch<E>> iterator = branchById.values().iterator(); iterator.hasNext(); ) {
 			Branch<E> branch = iterator.next();
 			if (branch.joint.size() != 1 || retainIds.contains(branch)) {
