@@ -11,6 +11,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasSize;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertSame;
 
 public class TreeStackMergeTest {
 
@@ -31,7 +33,9 @@ public class TreeStackMergeTest {
 		stack.merge(singleton(id3));
 		// then
 		assertEquals(stack.branchById.keySet(), singleton(id3));
-		assertEquals(stack.branchById.get(id3).elements, asList(1, 2, 3));
+		Branch<Integer> b3 = stack.branchById.get(id3);
+		assertEquals(b3.elements, asList(1, 2, 3));
+		assertNull(b3.parent);
 	}
 
 	@Test
@@ -46,8 +50,12 @@ public class TreeStackMergeTest {
 		// then
 		assertThat(stack.branchById.keySet(), hasSize(2));
 		assertThat(stack.branchById.keySet(), hasItems(id2, id4));
-		assertEquals(stack.branchById.get(id2).elements, asList(1, 2));
-		assertEquals(stack.branchById.get(id4).elements, asList(3, 4));
+		Branch<Integer> b2 = stack.branchById.get(id2);
+		assertEquals(b2.elements, asList(1, 2));
+		assertNull(b2.parent);
+		Branch<Integer> b4 = stack.branchById.get(id4);
+		assertEquals(b4.elements, asList(3, 4));
+		assertSame(b4.parent, b2);
 	}
 
 	@Test

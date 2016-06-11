@@ -148,6 +148,7 @@ public final class TreeStack<E> {
 			}
 			Branch<E> nextBranch = branch.joint.values().iterator().next();
 			nextBranch.elements.addAll(0, branch.elements);
+			nextBranch.parent = branch.parent;
 			if (branch.parent != null) {
 				branch.parent.joint.put(branch.elements.get(0), nextBranch);
 			}
