@@ -23,29 +23,35 @@ import static org.msyu.javautil.cf.Iterators.singletonIterator;
 import static org.testng.Assert.assertEquals;
 
 @Test(singleThreaded = true)
-public class SimpleCalculator extends SimpleCalculatorBase<SimpleCalculatorBase.Token> {
+public class NaiveAst extends SimpleCalculatorBase<SimpleCalculatorBase.Token> {
 
-	private Integer result;
+	private Object result;
 
 	@BeforeMethod
 	@Override
 	public void beforeMethod() {
 		callback = new GlrCallback<SimpleCalculatorBase.Token>() {
-			private final TreeStack<SimpleCalculatorBase.Token> stack = new TreeStack<>();
+			private final TreeStack<Object> stack = new TreeStack<>();
 
 			@Override
 			public Terminal getSymbolOfToken(SimpleCalculatorBase.Token token) {
 				return token.terminal;
 			}
 
-			private Iterator<SimpleCalculatorBase.Token> emptySymbolsToTokens(List<ASymbol> prependedEmptySymbols) {
+			private Iterator<Object> emptySymbolsToTokens(List<ASymbol> prependedEmptySymbols) {
 				assert prependedEmptySymbols.isEmpty() : "why are there empty symbols?";
-				return Collections.nCopies(prependedEmptySymbols.size(), (SimpleCalculatorBase.Token) null).iterator();
+				return Collections.nCopies(prependedEmptySymbols.size(), null).iterator();
 			}
 
 			@Override
 			public Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols, SimpleCalculatorBase.Token token) {
-				return stack.push(oldBranch, concat(emptySymbolsToTokens(prependedEmptySymbols), singletonIterator(token)));
+				return stack.push(
+						oldBranch,
+						concat(
+								emptySymbolsToTokens(prependedEmptySymbols),
+								singletonIterator(token.terminal == num ? token.value : token.terminal)
+						)
+				);
 			}
 
 			@Override
@@ -55,23 +61,12 @@ public class SimpleCalculator extends SimpleCalculatorBase<SimpleCalculatorBase.
 
 			@Override
 			public Object reduce(Object oldBranch, ProductionHandle production) {
-				List<SimpleCalculatorBase.Token> tokens = new ArrayList<>();
-				Object popped = stack.pop(oldBranch, production.getRHS().size(), tok -> tokens.add(0, tok));
-				Integer result;
-				if (production == valueIsNum || production == prodIsValue || production == sumIsProd) {
-					result = tokens.get(0).value;
-				} else if (production == valueIsExpr) {
-					result = tokens.get(1).value;
-				} else if (production == prodTimesValue) {
-					result = tokens.get(0).value * tokens.get(2).value;
-				} else if (production == sumPlusProd) {
-					result = tokens.get(0).value + tokens.get(2).value;
-				} else if (production == goalProduction) {
-					result = SimpleCalculator.this.result = tokens.get(0).value;
-				} else {
-					throw new IllegalStateException("unknown production");
+				List<Object> stuff = new ArrayList<>();
+				Object popped = stack.pop(oldBranch, production.getRHS().size(), thing -> stuff.add(0, thing));
+				if (production == goalProduction) {
+					result = stuff;
 				}
-				return stack.push(popped, singletonIterator(new Token(result)));
+				return stack.push(popped, singletonIterator(stuff.size() == 1 ? stuff.get(0) : stuff));
 			}
 
 			@Override
@@ -79,7 +74,7 @@ public class SimpleCalculator extends SimpleCalculatorBase<SimpleCalculatorBase.
 				if (emptySymbols.isEmpty()) {
 					return oldBranch;
 				}
-				AtomicReference<SimpleCalculatorBase.Token> temp = new AtomicReference<>();
+				AtomicReference<Object> temp = new AtomicReference<>();
 				Object popped = stack.pop(oldBranch, 1, temp::set);
 				return stack.push(popped, concat(emptySymbolsToTokens(emptySymbols), singletonIterator(temp.get())));
 			}
@@ -107,7 +102,29 @@ public class SimpleCalculator extends SimpleCalculatorBase<SimpleCalculatorBase.
 		}
 
 		verify(callback).reduce(any(), eq(goalProduction));
-		assertEquals(result.intValue(), 46);
+		assertEquals(
+				result,
+				asList(
+						asList(
+								2,
+								times,
+								asList(
+										openParen,
+										asList(
+												3,
+												plus,
+												asList(
+														4,
+														times,
+														5
+												)
+										),
+										closeParen
+								)
+						),
+						eof
+				)
+		);
 	}
 
 }
