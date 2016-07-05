@@ -17,9 +17,9 @@ final class ItemStack {
 		this.nextInStack = nextInStack;
 	}
 
-	final ItemStack shift(GlrCallback callback) {
+	final <T> ItemStack shift(GlrCallback<T> callback, T token) {
 		return new ItemStack(
-				callback.shift(id, item.getCompletedSymbols(prependedEmptySymbols)),
+				callback.shift(id, item.getCompletedSymbols(prependedEmptySymbols), token),
 				0,
 				item.shift(),
 				nextInStack

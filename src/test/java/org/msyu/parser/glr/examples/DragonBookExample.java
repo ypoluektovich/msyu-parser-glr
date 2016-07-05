@@ -41,12 +41,12 @@ public class DragonBookExample extends ReachTheGoalTestBase<Terminal> {
 
 	@Test
 	public void example() {
-		state = callback.advance(state, id);
-		state = callback.advance(state, times);
-		state = callback.advance(state, num);
-		state = callback.advance(state, plus);
-		state = callback.advance(state, num);
-		state = callback.advance(state, eof);
+		state = state.advance(id, callback);
+		state = state.advance(times, callback);
+		state = state.advance(num, callback);
+		state = state.advance(plus, callback);
+		state = state.advance(num, callback);
+		state = state.advance(eof, callback);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}

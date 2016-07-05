@@ -29,18 +29,19 @@ public final class State {
 		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
 	}
 
-	public final State advance(Terminal terminal, GlrCallback callback) {
-		return new State(this, terminal, callback);
+	public final <T> State advance(T token, GlrCallback<T> callback) {
+		return new State(this, token, callback);
 	}
 
-	private State(State previousState, Terminal terminal, GlrCallback callback) {
+	private <T> State(State previousState, T token, GlrCallback<T> callback) {
 		this.sapling = previousState.sapling;
 		List<ItemStack> stacks = new ArrayList<>();
 		{
+			Terminal terminal = callback.getSymbolOfToken(token);
 			List<ItemStack> shiftedStacks = new ArrayList<>();
 			for (ItemStack oldStack : previousState.stacks) {
 				if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
-					shiftedStacks.add(oldStack.shift(callback));
+					shiftedStacks.add(oldStack.shift(callback, token));
 				}
 			}
 			reduce(shiftedStacks, stacks, callback);

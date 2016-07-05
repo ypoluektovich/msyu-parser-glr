@@ -29,15 +29,15 @@ public class SkippableSymbolAtTheEnd extends ReachTheGoalTestBase<Terminal> {
 
 	@Test
 	public void skipped() {
-		state = callback.advance(state, prefix);
+		state = state.advance(prefix, callback);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}
 
 	@Test
 	public void filled() {
-		state = callback.advance(state, prefix);
-		state = callback.advance(state, suffix);
+		state = state.advance(prefix, callback);
+		state = state.advance(suffix, callback);
 
 		verify(callback, times(2)).reduce(any(), eq(goalProduction));
 	}

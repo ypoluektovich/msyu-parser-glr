@@ -2,9 +2,11 @@ package org.msyu.parser.glr;
 
 import java.util.List;
 
-public interface GlrCallback {
+public interface GlrCallback<T> {
 
-	Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols);
+	Terminal getSymbolOfToken(T token);
+
+	Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols, T token);
 
 	Object skip(Object oldBranch, List<ASymbol> emptySymbols);
 

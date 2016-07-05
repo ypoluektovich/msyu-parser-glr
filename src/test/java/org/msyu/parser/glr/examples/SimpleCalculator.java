@@ -1,10 +1,10 @@
 package org.msyu.parser.glr.examples;
 
 import org.msyu.parser.glr.ASymbol;
+import org.msyu.parser.glr.GlrCallback;
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.ProductionHandle;
 import org.msyu.parser.glr.Terminal;
-import org.msyu.parser.glr.grammartest.ASymbolTrackingCallback;
 import org.msyu.parser.glr.grammartest.ReachTheGoalTestBase;
 import org.msyu.parser.treestack.TreeStack;
 import org.testng.annotations.BeforeMethod;
@@ -76,11 +76,11 @@ public class SimpleCalculator extends ReachTheGoalTestBase<SimpleCalculator.Toke
 	@BeforeMethod
 	@Override
 	public void beforeMethod() {
-		callback = new ASymbolTrackingCallback<Token>() {
+		callback = new GlrCallback<Token>() {
 			private final TreeStack<Token> stack = new TreeStack<>();
 
 			@Override
-			protected Terminal symbolByToken(Token token) {
+			public Terminal getSymbolOfToken(Token token) {
 				return token.terminal;
 			}
 
@@ -90,7 +90,7 @@ public class SimpleCalculator extends ReachTheGoalTestBase<SimpleCalculator.Toke
 			}
 
 			@Override
-			public Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols) {
+			public Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols, Token token) {
 				return stack.push(oldBranch, concat(emptySymbolsToTokens(prependedEmptySymbols), singletonIterator(token)));
 			}
 
@@ -149,7 +149,7 @@ public class SimpleCalculator extends ReachTheGoalTestBase<SimpleCalculator.Toke
 		);
 
 		for (Token token : tokens) {
-			state = callback.advance(state, token);
+			state = state.advance(token, callback);
 		}
 
 		verify(callback).reduce(any(), eq(goalProduction));

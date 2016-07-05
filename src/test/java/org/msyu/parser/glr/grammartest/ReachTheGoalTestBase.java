@@ -3,6 +3,7 @@ package org.msyu.parser.glr.grammartest;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.msyu.parser.glr.GlrCallback;
 import org.msyu.parser.glr.GrammarBuilder;
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.ProductionHandle;
@@ -23,7 +24,7 @@ public abstract class ReachTheGoalTestBase<T> extends SingleGrammarTestBase {
 
 	protected Sapling sapling;
 
-	@Spy protected ASymbolTrackingCallback<T> callback;
+	@Spy protected GlrCallback<T> callback;
 
 	protected State state;
 

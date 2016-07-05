@@ -2,6 +2,7 @@ package org.msyu.parser.glr.grammartest;
 
 import org.msyu.javautil.cf.NoOp;
 import org.msyu.parser.glr.ASymbol;
+import org.msyu.parser.glr.GlrCallback;
 import org.msyu.parser.glr.ProductionHandle;
 import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
@@ -17,7 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.msyu.javautil.cf.Iterators.concat;
 import static org.msyu.javautil.cf.Iterators.singletonIterator;
 
-public class LoggingCallback extends ASymbolTrackingCallback<Terminal> {
+public class LoggingCallback implements GlrCallback<Terminal> {
 
 	private final TreeStack<ASymbol> stack = new TreeStack<>();
 
@@ -25,15 +26,14 @@ public class LoggingCallback extends ASymbolTrackingCallback<Terminal> {
 	private final Map<Object, Integer> indexByBranch = new HashMap<>();
 
 	@Override
-	protected Terminal symbolByToken(Terminal token) {
+	public Terminal getSymbolOfToken(Terminal token) {
 		return token;
 	}
 
-	@Override
-	public State advance(State state, Terminal symbol) {
-		System.out.printf("iteration: %s\n", symbol);
+	public State advance(State state, Terminal token) {
+		System.out.printf("iteration: %s\n", token);
 
-		super.advance(state, symbol);
+		state = state.advance(token, this);
 
 		Set<Object> usedStackIds = state.getUsedStackIds();
 		stack.retain(usedStackIds);
@@ -52,7 +52,7 @@ public class LoggingCallback extends ASymbolTrackingCallback<Terminal> {
 	}
 
 	@Override
-	public Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols) {
+	public Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols, Terminal token) {
 		Object newBranch = stack.push(oldBranch, concat(prependedEmptySymbols.iterator(), singletonIterator(token)));
 		Integer oldIndex = indexByBranch.get(oldBranch);
 		Integer newIndex = indexByBranch.computeIfAbsent(newBranch, __ -> ++indexSource);

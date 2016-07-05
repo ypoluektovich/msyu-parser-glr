@@ -36,9 +36,9 @@ public class AmbiguousGrammar extends ReachTheGoalTestBase<Terminal> {
 
 	@Test
 	public void run() {
-		state = callback.advance(state, prefix);
-		state = callback.advance(state, middle);
-		state = callback.advance(state, suffix);
+		state = state.advance(prefix, callback);
+		state = state.advance(middle, callback);
+		state = state.advance(suffix, callback);
 
 		verify(callback, times(2)).reduce(any(), eq(goalProduction));
 	}

@@ -28,24 +28,24 @@ public class LeftRecursion extends ReachTheGoalTestBase<Terminal> {
 
 	@Test
 	public void zero() {
-		state = callback.advance(state, suffix);
+		state = state.advance(suffix, callback);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}
 
 	@Test
 	public void one() {
-		state = callback.advance(state, prefix);
-		state = callback.advance(state, suffix);
+		state = state.advance(prefix, callback);
+		state = state.advance(suffix, callback);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}
 
 	@Test
 	public void two() {
-		state = callback.advance(state, prefix);
-		state = callback.advance(state, prefix);
-		state = callback.advance(state, suffix);
+		state = state.advance(prefix, callback);
+		state = state.advance(prefix, callback);
+		state = state.advance(suffix, callback);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}

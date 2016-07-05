@@ -29,17 +29,17 @@ public class SkippableSymbolInTheMiddle extends ReachTheGoalTestBase<Terminal> {
 
 	@Test
 	public void skipped() {
-		state = callback.advance(state, prefix);
-		state = callback.advance(state, suffix);
+		state = state.advance(prefix, callback);
+		state = state.advance(suffix, callback);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}
 
 	@Test
 	public void filled() {
-		state = callback.advance(state, prefix);
-		state = callback.advance(state, middle);
-		state = callback.advance(state, suffix);
+		state = state.advance(prefix, callback);
+		state = state.advance(middle, callback);
+		state = state.advance(suffix, callback);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}
