@@ -40,7 +40,7 @@ public class AmbiguousGrammar extends ReachTheGoalTestBase<Terminal, LoggingCall
 		state = callback.advance(state, middle);
 		state = callback.advance(state, suffix);
 
-		verify(callback, times(2)).reduce(any(), eq(goalProduction));
+		verify(callback, times(1)).reduce(any(), eq(goalProduction));
 	}
 
 }
