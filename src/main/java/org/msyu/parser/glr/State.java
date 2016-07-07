@@ -1,11 +1,11 @@
 package org.msyu.parser.glr;
 
+import org.msyu.javautil.cf.CopyList;
 import org.msyu.javautil.cf.CopySet;
-import org.msyu.javautil.cf.WrapList;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
@@ -22,11 +22,7 @@ public final class State {
 
 	private State(Sapling sapling) {
 		this.sapling = sapling;
-		List<ItemStack> stacks = new ArrayList<>();
-		for (Item item : sapling.initialItems) {
-			stacks.add(new ItemStack(null, item.position, item, null));
-		}
-		this.stacks = WrapList.immutable(stacks);
+		this.stacks = CopyList.immutable(sapling.initialItems, item -> new ItemStack(null, item.position, item, null));
 		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
 	}
 
@@ -36,13 +32,20 @@ public final class State {
 
 	private <T> State(State previousState, T token, GlrCallback<T> callback) {
 		this.sapling = previousState.sapling;
-		List<ItemStack> stacks = new ArrayList<>();
-		{
-			Queue<ItemStack> shiftedStacks = new ArrayDeque<>();
-			shift(previousState, token, callback, shiftedStacks);
-			reduce(shiftedStacks, stacks, callback);
-		}
-		this.stacks = WrapList.immutable(stacks);
+
+		Queue<ItemStack> stacksQueue = new ArrayDeque<>();
+		Set<ItemStack> stacksSet = new HashSet<>();
+
+		shift(previousState, token, callback, stacksQueue);
+
+		reduce(stacksQueue, stacksSet, callback);
+
+		stacksQueue.addAll(stacksSet);
+		stacksSet.clear();
+
+		expand(stacksQueue, stacksSet);
+
+		this.stacks = CopyList.immutable(stacksSet);
 		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
 	}
 
@@ -55,16 +58,13 @@ public final class State {
 		}
 	}
 
-	private void reduce(Collection<ItemStack> shiftedStacks, List<ItemStack> newStacks, GlrCallback callback) {
-		Queue<ItemStack> reductionQueue = new ArrayDeque<>(shiftedStacks);
-		Queue<ItemStack> expansionQueue = new ArrayDeque<>();
-
+	private void reduce(Queue<ItemStack> reductionQueue, Collection<ItemStack> reducedStacks, GlrCallback callback) {
 		for (ItemStack stack; (stack = reductionQueue.poll()) != null; ) {
 			if (!stack.item.isFinished()) {
 				if (sapling.grammar.isCompletable(stack.item)) {
 					reductionQueue.add(stack.skipToEnd(callback));
 				}
-				expansionQueue.add(stack);
+				reducedStacks.add(stack);
 				continue;
 			}
 			ItemStack nextInStack = stack.nextInStack;
@@ -83,7 +83,9 @@ public final class State {
 				reductionQueue.add(nextInStack.finishGuidedReduction(callback, reducedBranchId));
 			}
 		}
+	}
 
+	private void expand(Queue<ItemStack> expansionQueue, Collection<ItemStack> expandedStacks) {
 		for (ItemStack stack; (stack = expansionQueue.poll()) != null; ) {
 			Item item = stack.item;
 			do {
@@ -91,11 +93,11 @@ public final class State {
 				if (sapling.grammar.fillableSymbols.contains(nextSymbol)) {
 					stack = stack.skipTo(item);
 					if (nextSymbol instanceof Terminal) {
-						newStacks.add(stack);
+						expandedStacks.add(stack);
 					} else if (nextSymbol instanceof NonTerminal) {
 						NonTerminal nextNonTerminal = (NonTerminal) nextSymbol;
 						for (Item nextItem : sapling.grammar.getAllInitializingItemsOf(nextNonTerminal)) {
-							newStacks.add(new ItemStack(stack.id, nextItem.position, nextItem, stack.copyWithNoId()));
+							expandedStacks.add(new ItemStack(stack.id, nextItem.position, nextItem, stack.copyWithNoId()));
 						}
 					}
 				}
