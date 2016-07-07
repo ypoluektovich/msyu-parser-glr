@@ -2,6 +2,7 @@ package org.msyu.parser.glr.examples;
 
 import org.msyu.parser.glr.GlrCallback;
 import org.msyu.parser.glr.Terminal;
+import org.msyu.parser.glr.UnexpectedTokenException;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -42,7 +43,7 @@ public class NaiveAst extends SimpleCalculatorBase<SimpleCalculatorBase.Token, G
 	}
 
 	@Test
-	public void example() {
+	public void example() throws UnexpectedTokenException {
 		List<Token> tokens = asList(
 				new Token(2),
 				new Token(times),

@@ -26,11 +26,11 @@ public final class State {
 		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
 	}
 
-	public final <T> State advance(T token, GlrCallback<T> callback) {
+	public final <T> State advance(T token, GlrCallback<T> callback) throws UnexpectedTokenException {
 		return new State(this, token, callback);
 	}
 
-	private <T> State(State previousState, T token, GlrCallback<T> callback) {
+	private <T> State(State previousState, T token, GlrCallback<T> callback) throws UnexpectedTokenException {
 		this.sapling = previousState.sapling;
 
 		Queue<ItemStack> stacksQueue = new ArrayDeque<>();
@@ -49,12 +49,19 @@ public final class State {
 		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
 	}
 
-	private <T> void shift(State previousState, T token, GlrCallback<T> callback, Collection<ItemStack> shiftedStacks) {
+	private <T> void shift(State previousState, T token, GlrCallback<T> callback, Collection<ItemStack> shiftedStacks) throws UnexpectedTokenException {
 		Terminal terminal = callback.getSymbolOfToken(token);
 		for (ItemStack oldStack : previousState.stacks) {
 			if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
 				shiftedStacks.add(oldStack.shift(callback, token));
 			}
+		}
+		if (shiftedStacks.isEmpty()) {
+			throw new UnexpectedTokenException(
+					CopySet.immutableHash(previousState.stacks, stack -> (Terminal) stack.item.getExpectedNextSymbol()),
+					terminal,
+					token
+			);
 		}
 	}
 

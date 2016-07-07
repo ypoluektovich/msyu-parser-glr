@@ -4,6 +4,7 @@ import org.msyu.parser.glr.ASymbol;
 import org.msyu.parser.glr.GlrCallback;
 import org.msyu.parser.glr.ProductionHandle;
 import org.msyu.parser.glr.Terminal;
+import org.msyu.parser.glr.UnexpectedTokenException;
 import org.msyu.parser.treestack.TreeStack;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -88,7 +89,7 @@ public class SimpleCalculator extends SimpleCalculatorBase<SimpleCalculatorBase.
 	}
 
 	@Test
-	public void example() {
+	public void example() throws UnexpectedTokenException {
 		List<Token> tokens = asList(
 				new Token(2),
 				new Token(times),

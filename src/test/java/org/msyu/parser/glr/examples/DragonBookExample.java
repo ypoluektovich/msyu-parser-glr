@@ -2,6 +2,7 @@ package org.msyu.parser.glr.examples;
 
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Terminal;
+import org.msyu.parser.glr.UnexpectedTokenException;
 import org.msyu.parser.glr.grammartest.LoggingCallback;
 import org.msyu.parser.glr.grammartest.ReachTheGoalTestBase;
 import org.testng.annotations.Test;
@@ -40,7 +41,7 @@ public class DragonBookExample extends ReachTheGoalTestBase<Terminal, LoggingCal
 	}
 
 	@Test
-	public void example() {
+	public void example() throws UnexpectedTokenException {
 		state = callback.advance(state, id);
 		state = callback.advance(state, times);
 		state = callback.advance(state, num);

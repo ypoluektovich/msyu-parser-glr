@@ -2,6 +2,7 @@ package org.msyu.parser.glr.grammartest;
 
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Terminal;
+import org.msyu.parser.glr.UnexpectedTokenException;
 import org.testng.annotations.Test;
 
 import static org.mockito.Matchers.any;
@@ -27,14 +28,14 @@ public class LeftRecursion extends ReachTheGoalTestBase<Terminal, LoggingCallbac
 	}
 
 	@Test
-	public void zero() {
+	public void zero() throws UnexpectedTokenException {
 		state = callback.advance(state, suffix);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}
 
 	@Test
-	public void one() {
+	public void one() throws UnexpectedTokenException {
 		state = callback.advance(state, prefix);
 		state = callback.advance(state, suffix);
 
@@ -42,7 +43,7 @@ public class LeftRecursion extends ReachTheGoalTestBase<Terminal, LoggingCallbac
 	}
 
 	@Test
-	public void two() {
+	public void two() throws UnexpectedTokenException {
 		state = callback.advance(state, prefix);
 		state = callback.advance(state, prefix);
 		state = callback.advance(state, suffix);

@@ -5,6 +5,7 @@ import org.mockito.MockitoAnnotations;
 import org.msyu.javautil.cf.CopyList;
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Terminal;
+import org.msyu.parser.glr.UnexpectedTokenException;
 import org.msyu.parser.glr.examples.NaiveAstCallback;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -79,7 +80,7 @@ public class AmbiguousGrammarWithAST extends ReachTheGoalTestBase<Terminal, Naiv
 	}
 
 	@Test
-	public void run() {
+	public void run() throws UnexpectedTokenException {
 		state = state.advance(prefix, callback);
 		state = state.advance(middle, callback);
 		state = state.advance(suffix, callback);

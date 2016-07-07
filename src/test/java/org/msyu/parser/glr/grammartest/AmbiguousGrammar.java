@@ -2,6 +2,7 @@ package org.msyu.parser.glr.grammartest;
 
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Terminal;
+import org.msyu.parser.glr.UnexpectedTokenException;
 import org.testng.annotations.Test;
 
 import static org.mockito.Matchers.any;
@@ -35,7 +36,7 @@ public class AmbiguousGrammar extends ReachTheGoalTestBase<Terminal, LoggingCall
 	}
 
 	@Test
-	public void run() {
+	public void run() throws UnexpectedTokenException {
 		state = callback.advance(state, prefix);
 		state = callback.advance(state, middle);
 		state = callback.advance(state, suffix);

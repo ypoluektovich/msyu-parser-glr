@@ -6,6 +6,7 @@ import org.msyu.parser.glr.GlrCallback;
 import org.msyu.parser.glr.ProductionHandle;
 import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
+import org.msyu.parser.glr.UnexpectedTokenException;
 import org.msyu.parser.treestack.TreeStack;
 
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ public class LoggingCallback implements GlrCallback<Terminal> {
 		return token;
 	}
 
-	public State advance(State state, Terminal token) {
+	public State advance(State state, Terminal token) throws UnexpectedTokenException {
 		System.out.printf("iteration: %s\n", token);
 
 		state = state.advance(token, this);
