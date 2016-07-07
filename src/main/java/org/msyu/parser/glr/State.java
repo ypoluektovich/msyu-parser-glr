@@ -23,7 +23,7 @@ public final class State {
 	private State(Sapling sapling) {
 		this.sapling = sapling;
 		this.stacks = CopyList.immutable(sapling.initialItems, item -> new ItemStack(null, item.position, item, null));
-		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
+		this.stackIds = collectUsedStackIds(stacks);
 	}
 
 	public final <T> State advance(T token, GlrCallback<T> callback) throws UnexpectedTokenException {
@@ -46,7 +46,7 @@ public final class State {
 		expand(stacksQueue, stacksSet);
 
 		this.stacks = CopyList.immutable(stacksSet);
-		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
+		this.stackIds = collectUsedStackIds(stacks);
 	}
 
 	private <T> void shift(State previousState, T token, GlrCallback<T> callback, Collection<ItemStack> shiftedStacks) throws UnexpectedTokenException {
@@ -132,6 +132,36 @@ public final class State {
 		}
 		return lhsFitsExpected &&
 				(skipSaplingCheck || sapling.allowedBlindReductionNonTerminals.contains(item.production.lhs));
+	}
+
+	public static State join(Iterable<State> states) {
+		if (states == null) {
+			throw new IllegalArgumentException("states collection must be non-null");
+		}
+		Sapling sapling = null;
+		Set<ItemStack> stacks = new HashSet<>();
+		for (State state : states) {
+			if (sapling == null) {
+				sapling = state.sapling;
+			} else if (sapling != state.sapling) {
+				throw new IllegalArgumentException("all joining states must grow from the same sapling");
+			}
+			stacks.addAll(state.stacks);
+		}
+		if (sapling == null) {
+			throw new IllegalArgumentException("states collection must be non-empty");
+		}
+		return new State(sapling, stacks);
+	}
+
+	private State(Sapling sapling, Set<ItemStack> stackSet) {
+		this.sapling = sapling;
+		stacks = CopyList.immutable(stackSet);
+		stackIds = collectUsedStackIds(stacks);
+	}
+
+	private static Set<Object> collectUsedStackIds(List<ItemStack> stacks) {
+		return CopySet.immutableHash(stacks, stack -> stack.id);
 	}
 
 

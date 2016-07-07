@@ -2,7 +2,6 @@ package org.msyu.parser.glr.grammartest;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockitoAnnotations;
-import org.msyu.javautil.cf.CopyList;
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Terminal;
 import org.msyu.parser.glr.UnexpectedTokenException;
@@ -20,24 +19,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 public class AmbiguousGrammarWithAST extends ReachTheGoalTestBase<Terminal, NaiveAstCallback<Terminal>> {
-
-	private final static class NoEqualsRef {
-		final Object ref;
-
-		private NoEqualsRef(Object ref) {
-			this.ref = ref;
-		}
-
-		static Object unwrap(Object listOfRefs) {
-			if (listOfRefs instanceof List) {
-				return CopyList.immutable((List<?>) listOfRefs, NoEqualsRef::unwrap);
-			} else if (listOfRefs instanceof NoEqualsRef) {
-				return ((NoEqualsRef) listOfRefs).ref;
-			} else {
-				return listOfRefs;
-			}
-		}
-	}
 
 	Terminal prefix = gb.addTerminal("prefix");
 	Terminal middle = gb.addTerminal("middle");
