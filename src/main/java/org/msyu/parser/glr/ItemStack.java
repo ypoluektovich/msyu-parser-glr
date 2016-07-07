@@ -27,7 +27,7 @@ final class ItemStack {
 		);
 	}
 
-	final ItemStack skipToEnd(GlrCallback callback) {
+	final ItemStack skipToEnd(GlrCallback<?> callback) {
 		Production production = item.production;
 		List<ASymbol> rhs = production.rhs;
 		return new ItemStack(
@@ -41,7 +41,7 @@ final class ItemStack {
 	/**
 	 * Called on the stack <em>being reduced</em>.
 	 */
-	final ItemStack finishBlindReduction(GlrCallback callback, Object reducedBranchId, Item newItem) {
+	final ItemStack finishBlindReduction(GlrCallback<?> callback, Object reducedBranchId, Item newItem) {
 		return new ItemStack(
 				callback.insert(reducedBranchId, newItem.getCompletedSymbols()),
 				0,
@@ -53,7 +53,7 @@ final class ItemStack {
 	/**
 	 * Called on the stack <em>into</em> which the reduction happened.
 	 */
-	final ItemStack finishGuidedReduction(GlrCallback callback, Object reducedBranchId) {
+	final ItemStack finishGuidedReduction(GlrCallback<?> callback, Object reducedBranchId) {
 		return new ItemStack(
 				callback.insert(reducedBranchId, item.getCompletedSymbols(prependedEmptySymbols)),
 				0,

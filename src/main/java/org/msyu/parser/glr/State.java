@@ -65,7 +65,7 @@ public final class State {
 		}
 	}
 
-	private void reduce(Queue<ItemStack> reductionQueue, Collection<ItemStack> reducedStacks, GlrCallback callback) {
+	private void reduce(Queue<ItemStack> reductionQueue, Collection<ItemStack> reducedStacks, GlrCallback<?> callback) {
 		for (ItemStack stack; (stack = reductionQueue.poll()) != null; ) {
 			if (!stack.item.isFinished()) {
 				if (sapling.grammar.isCompletable(stack.item)) {
