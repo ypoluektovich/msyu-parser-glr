@@ -1,6 +1,7 @@
 package org.msyu.parser.glr;
 
 import java.util.List;
+import java.util.Objects;
 
 final class ItemStack {
 
@@ -73,6 +74,26 @@ final class ItemStack {
 			copyWithNoId = this.copyWithNoId = new ItemStack(null, prependedEmptySymbols, item, nextInStack);
 		}
 		return copyWithNoId;
+	}
+
+	@Override
+	public final boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null || getClass() != obj.getClass()) {
+			return false;
+		}
+		ItemStack that = (ItemStack) obj;
+		return prependedEmptySymbols == that.prependedEmptySymbols &&
+				Objects.equals(id, that.id) &&
+				item.equals(that.item) &&
+				Objects.equals(nextInStack, that.nextInStack);
+	}
+
+	@Override
+	public final int hashCode() {
+		return Objects.hash(id, prependedEmptySymbols, item, nextInStack);
 	}
 
 	@Override
