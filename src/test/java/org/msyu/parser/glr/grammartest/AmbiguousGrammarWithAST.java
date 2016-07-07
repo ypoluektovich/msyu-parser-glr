@@ -30,7 +30,7 @@ public class AmbiguousGrammarWithAST extends ReachTheGoalTestBase<Terminal, Naiv
 
 		static Object unwrap(Object listOfRefs) {
 			if (listOfRefs instanceof List) {
-				return CopyList.immutable((List) listOfRefs, NoEqualsRef::unwrap);
+				return CopyList.immutable((List<?>) listOfRefs, NoEqualsRef::unwrap);
 			} else if (listOfRefs instanceof NoEqualsRef) {
 				return ((NoEqualsRef) listOfRefs).ref;
 			} else {
