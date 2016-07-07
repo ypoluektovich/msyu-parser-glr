@@ -1,25 +1,16 @@
 package org.msyu.parser.glr.examples;
 
-import org.msyu.parser.glr.ASymbol;
 import org.msyu.parser.glr.GlrCallback;
-import org.msyu.parser.glr.ProductionHandle;
 import org.msyu.parser.glr.Terminal;
-import org.msyu.parser.treestack.TreeStack;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Arrays.asList;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.msyu.javautil.cf.Iterators.concat;
-import static org.msyu.javautil.cf.Iterators.singletonIterator;
 import static org.testng.Assert.assertEquals;
 
 @Test(singleThreaded = true)
@@ -30,53 +21,21 @@ public class NaiveAst extends SimpleCalculatorBase<SimpleCalculatorBase.Token, G
 	@BeforeMethod
 	@Override
 	public void beforeMethod() {
-		callback = new GlrCallback<SimpleCalculatorBase.Token>() {
-			private final TreeStack<Object> stack = new TreeStack<>();
-
+		callback = new NaiveAstCallback<SimpleCalculatorBase.Token>(
+				(production, stuffToStack) -> {
+					if (production == goalProduction) {
+						result = stuffToStack;
+					}
+				}
+		) {
 			@Override
 			public Terminal getSymbolOfToken(SimpleCalculatorBase.Token token) {
 				return token.terminal;
 			}
 
-			private Iterator<Object> emptySymbolsToTokens(List<ASymbol> prependedEmptySymbols) {
-				assert prependedEmptySymbols.isEmpty() : "why are there empty symbols?";
-				return Collections.nCopies(prependedEmptySymbols.size(), null).iterator();
-			}
-
 			@Override
-			public Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols, SimpleCalculatorBase.Token token) {
-				return stack.push(
-						oldBranch,
-						concat(
-								emptySymbolsToTokens(prependedEmptySymbols),
-								singletonIterator(token.terminal == num ? token.value : token.terminal)
-						)
-				);
-			}
-
-			@Override
-			public Object skip(Object oldBranch, List<ASymbol> emptySymbols) {
-				return stack.push(oldBranch, emptySymbolsToTokens(emptySymbols));
-			}
-
-			@Override
-			public Object reduce(Object oldBranch, ProductionHandle production) {
-				List<Object> stuff = new ArrayList<>();
-				Object popped = stack.pop(oldBranch, production.getRHS().size(), thing -> stuff.add(0, thing));
-				if (production == goalProduction) {
-					result = stuff;
-				}
-				return stack.push(popped, singletonIterator(stuff.size() == 1 ? stuff.get(0) : stuff));
-			}
-
-			@Override
-			public Object insert(Object oldBranch, List<ASymbol> emptySymbols) {
-				if (emptySymbols.isEmpty()) {
-					return oldBranch;
-				}
-				AtomicReference<Object> temp = new AtomicReference<>();
-				Object popped = stack.pop(oldBranch, 1, temp::set);
-				return stack.push(popped, concat(emptySymbolsToTokens(emptySymbols), singletonIterator(temp.get())));
+			protected Object getStackableToken(SimpleCalculatorBase.Token token) {
+				return token.terminal == num ? token.value : token.terminal;
 			}
 		};
 		super.beforeMethod();
@@ -105,18 +64,23 @@ public class NaiveAst extends SimpleCalculatorBase<SimpleCalculatorBase.Token, G
 		assertEquals(
 				result,
 				asList(
+						goal,
 						asList(
-								2,
+								products,
+								asList(value, 2),
 								times,
 								asList(
+										value,
 										openParen,
 										asList(
-												3,
+												sums,
+												asList(value, 3),
 												plus,
 												asList(
-														4,
+														products,
+														asList(value, 4),
 														times,
-														5
+														asList(value, 5)
 												)
 										),
 										closeParen
