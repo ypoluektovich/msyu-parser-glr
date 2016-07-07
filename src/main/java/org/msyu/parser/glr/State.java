@@ -5,6 +5,7 @@ import org.msyu.javautil.cf.WrapList;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
@@ -37,20 +38,24 @@ public final class State {
 		this.sapling = previousState.sapling;
 		List<ItemStack> stacks = new ArrayList<>();
 		{
-			Terminal terminal = callback.getSymbolOfToken(token);
-			List<ItemStack> shiftedStacks = new ArrayList<>();
-			for (ItemStack oldStack : previousState.stacks) {
-				if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
-					shiftedStacks.add(oldStack.shift(callback, token));
-				}
-			}
+			Queue<ItemStack> shiftedStacks = new ArrayDeque<>();
+			shift(previousState, token, callback, shiftedStacks);
 			reduce(shiftedStacks, stacks, callback);
 		}
 		this.stacks = WrapList.immutable(stacks);
 		this.stackIds = CopySet.immutableHash(stacks, stack -> stack.id);
 	}
 
-	private void reduce(List<ItemStack> shiftedStacks, List<ItemStack> newStacks, GlrCallback callback) {
+	private <T> void shift(State previousState, T token, GlrCallback<T> callback, Collection<ItemStack> shiftedStacks) {
+		Terminal terminal = callback.getSymbolOfToken(token);
+		for (ItemStack oldStack : previousState.stacks) {
+			if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
+				shiftedStacks.add(oldStack.shift(callback, token));
+			}
+		}
+	}
+
+	private void reduce(Collection<ItemStack> shiftedStacks, List<ItemStack> newStacks, GlrCallback callback) {
 		Queue<ItemStack> reductionQueue = new ArrayDeque<>(shiftedStacks);
 		Queue<ItemStack> expansionQueue = new ArrayDeque<>();
 
