@@ -23,7 +23,7 @@ import static org.msyu.javautil.cf.Iterators.singletonIterator;
 import static org.testng.Assert.assertEquals;
 
 @Test(singleThreaded = true)
-public class SimpleCalculator extends SimpleCalculatorBase<SimpleCalculatorBase.Token> {
+public class SimpleCalculator extends SimpleCalculatorBase<SimpleCalculatorBase.Token, GlrCallback<SimpleCalculatorBase.Token>> {
 
 	private Integer result;
 

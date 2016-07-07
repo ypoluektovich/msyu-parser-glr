@@ -10,7 +10,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 
-public class DragonBookExample extends ReachTheGoalTestBase<Terminal> {
+public class DragonBookExample extends ReachTheGoalTestBase<Terminal, LoggingCallback> {
 
 	Terminal id = gb.addTerminal("id");
 	Terminal num = gb.addTerminal("num");
@@ -41,12 +41,12 @@ public class DragonBookExample extends ReachTheGoalTestBase<Terminal> {
 
 	@Test
 	public void example() {
-		state = state.advance(id, callback);
-		state = state.advance(times, callback);
-		state = state.advance(num, callback);
-		state = state.advance(plus, callback);
-		state = state.advance(num, callback);
-		state = state.advance(eof, callback);
+		state = callback.advance(state, id);
+		state = callback.advance(state, times);
+		state = callback.advance(state, num);
+		state = callback.advance(state, plus);
+		state = callback.advance(state, num);
+		state = callback.advance(state, eof);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}

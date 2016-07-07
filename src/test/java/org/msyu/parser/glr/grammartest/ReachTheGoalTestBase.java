@@ -14,7 +14,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
-public abstract class ReachTheGoalTestBase<T> extends SingleGrammarTestBase {
+public abstract class ReachTheGoalTestBase<T, C extends GlrCallback<T>> extends SingleGrammarTestBase {
 
 	protected GrammarBuilder gb = new GrammarBuilder();
 
@@ -24,7 +24,7 @@ public abstract class ReachTheGoalTestBase<T> extends SingleGrammarTestBase {
 
 	protected Sapling sapling;
 
-	@Spy protected GlrCallback<T> callback;
+	@Spy protected C callback;
 
 	protected State state;
 

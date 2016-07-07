@@ -8,7 +8,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 
-public class LeftRecursion extends ReachTheGoalTestBase<Terminal> {
+public class LeftRecursion extends ReachTheGoalTestBase<Terminal, LoggingCallback> {
 
 	Terminal prefix = gb.addTerminal("prefix");
 	Terminal suffix = gb.addTerminal("suffix");
@@ -28,24 +28,24 @@ public class LeftRecursion extends ReachTheGoalTestBase<Terminal> {
 
 	@Test
 	public void zero() {
-		state = state.advance(suffix, callback);
+		state = callback.advance(state, suffix);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}
 
 	@Test
 	public void one() {
-		state = state.advance(prefix, callback);
-		state = state.advance(suffix, callback);
+		state = callback.advance(state, prefix);
+		state = callback.advance(state, suffix);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}
 
 	@Test
 	public void two() {
-		state = state.advance(prefix, callback);
-		state = state.advance(prefix, callback);
-		state = state.advance(suffix, callback);
+		state = callback.advance(state, prefix);
+		state = callback.advance(state, prefix);
+		state = callback.advance(state, suffix);
 
 		verify(callback).reduce(any(), eq(goalProduction));
 	}

@@ -1,11 +1,12 @@
 package org.msyu.parser.glr.examples;
 
+import org.msyu.parser.glr.GlrCallback;
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.ProductionHandle;
 import org.msyu.parser.glr.Terminal;
 import org.msyu.parser.glr.grammartest.ReachTheGoalTestBase;
 
-public abstract class SimpleCalculatorBase<T> extends ReachTheGoalTestBase<T> {
+public abstract class SimpleCalculatorBase<T, C extends GlrCallback<T>> extends ReachTheGoalTestBase<T, C> {
 
 	protected Terminal num = gb.addTerminal("num");
 	protected Terminal times = gb.addTerminal("*");
