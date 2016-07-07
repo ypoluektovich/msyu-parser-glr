@@ -4,15 +4,15 @@ import org.msyu.javautil.cf.CopyList;
 
 import java.util.List;
 
-final class NoEqualsRef {
+public final class NoEqualsRef {
 
-	final Object ref;
+	private final Object ref;
 
-	NoEqualsRef(Object ref) {
+	public NoEqualsRef(Object ref) {
 		this.ref = ref;
 	}
 
-	static Object unwrap(Object listOfRefs) {
+	public static Object unwrap(Object listOfRefs) {
 		if (listOfRefs instanceof List) {
 			return CopyList.immutable((List<?>) listOfRefs, NoEqualsRef::unwrap);
 		} else if (listOfRefs instanceof NoEqualsRef) {

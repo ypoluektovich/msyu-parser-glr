@@ -9,17 +9,14 @@ import java.util.Map;
 
 public final class MultiState {
 
-	private final Sapling sapling;
-
 	private final Map<Object, State> stateByPosition;
 
-	public static MultiState initializeFrom(Sapling sapling) {
-		return new MultiState(sapling);
+	public static MultiState initializeFrom(Sapling sapling, Object position) {
+		return new MultiState(sapling, position);
 	}
 
-	private MultiState(Sapling sapling) {
-		this.sapling = sapling;
-		stateByPosition = Collections.emptyMap();
+	private MultiState(Sapling sapling, Object position) {
+		stateByPosition = Collections.singletonMap(position, State.initializeFrom(sapling));
 	}
 
 	public final <T> MultiState advance(
@@ -33,7 +30,7 @@ public final class MultiState {
 		for (Map.Entry<T, Object> tokenAndStart : startByToken.entrySet()) {
 			T token = tokenAndStart.getKey();
 			Object start = tokenAndStart.getValue();
-			State state = start == null ? State.initializeFrom(sapling) : stateByPosition.get(start);
+			State state = stateByPosition.get(start);
 			if (state == null) {
 				throw new IllegalArgumentException("no state registered for position " + start);
 			}
@@ -43,7 +40,7 @@ public final class MultiState {
 				exceptions.add(e);
 			}
 		}
-		if (endStates.isEmpty()) {
+		if (!exceptions.isEmpty() && endStates.isEmpty()) {
 			UnexpectedTokensException exception = new UnexpectedTokensException();
 			for (UnexpectedTokenException e : exceptions) {
 				exception.addSuppressed(e);
@@ -54,7 +51,6 @@ public final class MultiState {
 	}
 
 	private MultiState(MultiState previousState, List<State> endStates, Object end, Collection<Object> growingPositions) {
-		this.sapling = previousState.sapling;
 		Map<Object, State> stateByPosition = new HashMap<>();
 		for (Map.Entry<Object, State> positionAndState : previousState.stateByPosition.entrySet()) {
 			Object position = positionAndState.getKey();
@@ -62,7 +58,9 @@ public final class MultiState {
 				stateByPosition.put(position, positionAndState.getValue());
 			}
 		}
-		stateByPosition.put(end, State.join(endStates));
+		if (!endStates.isEmpty()) {
+			stateByPosition.put(end, State.join(endStates));
+		}
 		this.stateByPosition = Collections.unmodifiableMap(stateByPosition);
 	}
 
