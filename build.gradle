@@ -1,7 +1,9 @@
 group 'org.msyu.parser'
+ext.pkgname = 'glr'
 version '0.0.1'
 
 apply plugin: 'java'
+apply plugin: 'maven-publish'
 
 sourceCompatibility = 1.8
 
@@ -19,4 +21,21 @@ dependencies {
 
 test {
     useTestNG()
+}
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.allSource
+}
+
+publishing {
+    publications {
+        main(MavenPublication) {
+            from components.java
+            artifactId pkgname
+
+            artifact sourceJar {
+                classifier "sources"
+            }
+        }
+    }
 }
