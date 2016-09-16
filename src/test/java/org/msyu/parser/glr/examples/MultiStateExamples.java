@@ -2,7 +2,7 @@ package org.msyu.parser.glr.examples;
 
 import org.mockito.MockitoAnnotations;
 import org.msyu.parser.glr.MultiState;
-import org.msyu.parser.glr.ProductionHandle;
+import org.msyu.parser.glr.Production;
 import org.msyu.parser.glr.Terminal;
 import org.msyu.parser.glr.UnexpectedTokensException;
 import org.msyu.parser.glr.grammartest.NoEqualsRef;
@@ -29,9 +29,9 @@ public class MultiStateExamples extends ReachTheGoalTestBase<Terminal, NaiveAstC
 		goal = gb.addNonTerminal("Goal");
 	}
 
-	ProductionHandle p_aaa = gb.addProduction(goal, aaa);
-	ProductionHandle p_aa_b = gb.addProduction(goal, aa, b);
-	ProductionHandle p_aa_aa = gb.addProduction(goal, aa, aa);
+	Production p_aaa = gb.addProduction(goal, aaa);
+	Production p_aa_b = gb.addProduction(goal, aa, b);
+	Production p_aa_aa = gb.addProduction(goal, aa, aa);
 
 	{
 		callback = new NaiveAstCallback<Terminal>(null) {

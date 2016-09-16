@@ -1,9 +1,10 @@
 package org.msyu.parser.glr;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-final class ItemStack {
+final class ItemStack implements ItemStackView, ItemStackFrame {
 
 	final Object id;
 	private final int prependedEmptySymbols;
@@ -115,6 +116,36 @@ final class ItemStack {
 		sb.append('(');
 		sb.append(item.toString());
 		sb.append(')');
+	}
+
+	@Override
+	public final Object getId() {
+		return id;
+	}
+
+	@Override
+	public final int getPrependedEmptySymbols() {
+		return prependedEmptySymbols;
+	}
+
+	@Override
+	public final ItemStackFrame getFirstFrame() {
+		return this;
+	}
+
+	@Override
+	public final List<ItemStackFrame> getFrames() {
+		List<ItemStackFrame> frames = new ArrayList<>();
+		ItemStack frame = this;
+		do {
+			frames.add(frame);
+		} while ((frame = frame.nextInStack) != null);
+		return frames;
+	}
+
+	@Override
+	public final Item getItem() {
+		return item;
 	}
 
 }

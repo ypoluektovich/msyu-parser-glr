@@ -18,7 +18,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.function.Consumer;
 
-public final class Grammar extends GrammarSeed {
+public final class Grammar extends GrammarFruit {
 
 	private final Map<NonTerminal, NonTerminalData> precomputedNonTerminalData;
 	final Set<ASymbol> skippableSymbols;

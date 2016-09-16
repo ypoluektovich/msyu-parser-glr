@@ -10,7 +10,7 @@ public interface GlrCallback<T> {
 
 	Object skip(Object oldBranch, List<ASymbol> emptySymbols);
 
-	Object reduce(Object oldBranch, ProductionHandle production);
+	Object reduce(Object oldBranch, Production production);
 
 	Object insert(Object oldBranch, List<ASymbol> emptySymbols);
 

@@ -2,7 +2,7 @@ package org.msyu.parser.glr.examples;
 
 import org.msyu.parser.glr.ASymbol;
 import org.msyu.parser.glr.GlrCallback;
-import org.msyu.parser.glr.ProductionHandle;
+import org.msyu.parser.glr.Production;
 import org.msyu.parser.glr.Terminal;
 import org.msyu.parser.glr.UnexpectedTokenException;
 import org.msyu.parser.treestack.TreeStack;
@@ -55,9 +55,9 @@ public class SimpleCalculator extends SimpleCalculatorBase<SimpleCalculatorBase.
 			}
 
 			@Override
-			public Object reduce(Object oldBranch, ProductionHandle production) {
+			public Object reduce(Object oldBranch, Production production) {
 				List<SimpleCalculatorBase.Token> tokens = new ArrayList<>();
-				Object popped = stack.pop(oldBranch, production.getRHS().size(), tok -> tokens.add(0, tok));
+				Object popped = stack.pop(oldBranch, production.rhs.size(), tok -> tokens.add(0, tok));
 				Integer result;
 				if (production == valueIsNum || production == prodIsValue || production == sumIsProd) {
 					result = tokens.get(0).value;

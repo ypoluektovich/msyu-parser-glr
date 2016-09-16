@@ -3,7 +3,7 @@ package org.msyu.parser.glr.grammartest;
 import org.msyu.javautil.cf.NoOp;
 import org.msyu.parser.glr.ASymbol;
 import org.msyu.parser.glr.GlrCallback;
-import org.msyu.parser.glr.ProductionHandle;
+import org.msyu.parser.glr.Production;
 import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
 import org.msyu.parser.glr.UnexpectedTokenException;
@@ -71,9 +71,9 @@ public class LoggingCallback implements GlrCallback<Terminal> {
 	}
 
 	@Override
-	public Object reduce(Object oldBranch, ProductionHandle production) {
-		Object popped = stack.pop(oldBranch, production.getRHS().size(), NoOp.consumer());
-		Object pushed = stack.push(popped, singletonIterator(production.getLHS()));
+	public Object reduce(Object oldBranch, Production production) {
+		Object popped = stack.pop(oldBranch, production.rhs.size(), NoOp.consumer());
+		Object pushed = stack.push(popped, singletonIterator(production.lhs));
 		Integer oldIndex = indexByBranch.get(oldBranch);
 		Integer newIndex = indexByBranch.computeIfAbsent(pushed, __ -> ++indexSource);
 		System.out.printf("reduce(%s, %s) -> %s %s\n", oldIndex, production, newIndex, enumerate(pushed));

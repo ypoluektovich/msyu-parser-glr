@@ -5,12 +5,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
-public final class GrammarBuilder extends GrammarSeed {
-
-	private final Map<String, ASymbol> symbolByName = new HashMap<>();
+public final class GrammarBuilder extends GrammarFruit {
 
 	public GrammarBuilder() {
 		super(new HashSet<>(), new HashMap<>());
@@ -32,7 +29,7 @@ public final class GrammarBuilder extends GrammarSeed {
 		return symbol;
 	}
 
-	public final ProductionHandle addProduction(NonTerminal lhs, List<ASymbol> rhs) {
+	public final Production addProduction(NonTerminal lhs, List<ASymbol> rhs) {
 		if (!nonTerminals.containsKey(lhs)) {
 			throw new IllegalArgumentException("production lhs must be a non-terminal from this grammar");
 		}
@@ -62,7 +59,7 @@ public final class GrammarBuilder extends GrammarSeed {
 		return production;
 	}
 
-	public final ProductionHandle addProduction(NonTerminal lhs, ASymbol... rhs) {
+	public final Production addProduction(NonTerminal lhs, ASymbol... rhs) {
 		return addProduction(lhs, rhs == null ? null : Arrays.asList(rhs));
 	}
 

@@ -2,7 +2,7 @@ package org.msyu.parser.glr.examples;
 
 import org.msyu.parser.glr.GlrCallback;
 import org.msyu.parser.glr.NonTerminal;
-import org.msyu.parser.glr.ProductionHandle;
+import org.msyu.parser.glr.Production;
 import org.msyu.parser.glr.Terminal;
 import org.msyu.parser.glr.grammartest.ReachTheGoalTestBase;
 
@@ -22,12 +22,12 @@ public abstract class SimpleCalculatorBase<T, C extends GlrCallback<T>> extends 
 		goal = gb.addNonTerminal("Expr");
 	}
 
-	protected ProductionHandle valueIsNum = gb.addProduction(value, num);
-	protected ProductionHandle valueIsExpr = gb.addProduction(value, openParen, sums, closeParen);
-	protected ProductionHandle prodTimesValue = gb.addProduction(products, products, times, value);
-	protected ProductionHandle prodIsValue = gb.addProduction(products, value);
-	protected ProductionHandle sumPlusProd = gb.addProduction(sums, sums, plus, products);
-	protected ProductionHandle sumIsProd = gb.addProduction(sums, products);
+	protected Production valueIsNum = gb.addProduction(value, num);
+	protected Production valueIsExpr = gb.addProduction(value, openParen, sums, closeParen);
+	protected Production prodTimesValue = gb.addProduction(products, products, times, value);
+	protected Production prodIsValue = gb.addProduction(products, value);
+	protected Production sumPlusProd = gb.addProduction(sums, sums, plus, products);
+	protected Production sumIsProd = gb.addProduction(sums, products);
 	{
 		goalProduction = gb.addProduction(goal, sums, eof);
 	}

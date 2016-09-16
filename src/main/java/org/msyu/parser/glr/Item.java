@@ -2,14 +2,14 @@ package org.msyu.parser.glr;
 
 import java.util.List;
 
-final class Item {
+public final class Item {
 
 	private static final String SPACE_ARROW = " \u2192";
 	private static final String SPACE_EPSILON = " \u03B5";
 	private static final String SPACE_BULLET = " \u2022";
 
-	final Production production;
-	final int position;
+	public final Production production;
+	public final int position;
 
 	/**
 	 * USE ONLY IN PRODUCTION CONSTRUCTOR!
@@ -19,7 +19,7 @@ final class Item {
 		this.position = position;
 	}
 
-	final boolean isFinished() {
+	public final boolean isFinished() {
 		return position == production.rhs.size();
 	}
 
@@ -31,7 +31,7 @@ final class Item {
 		return production.rhs.subList(position - count, position);
 	}
 
-	final ASymbol getExpectedNextSymbol() {
+	public final ASymbol getExpectedNextSymbol() {
 		return production.rhs.get(position);
 	}
 

@@ -9,12 +9,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public final class State {
 
 	private final Sapling sapling;
 	private final List<ItemStack> stacks;
-	private final Set<Object> stackIds;
 
 	public static State initializeFrom(Sapling sapling) {
 		return new State(sapling);
@@ -23,7 +23,6 @@ public final class State {
 	private State(Sapling sapling) {
 		this.sapling = sapling;
 		this.stacks = CopyList.immutable(sapling.initialItems, item -> new ItemStack(null, item.position, item, null));
-		this.stackIds = collectUsedStackIds(stacks);
 	}
 
 	public final <T> State advance(T token, GlrCallback<T> callback) throws UnexpectedTokenException {
@@ -46,7 +45,6 @@ public final class State {
 		expand(stacksQueue, stacksSet);
 
 		this.stacks = CopyList.immutable(stacksSet);
-		this.stackIds = collectUsedStackIds(stacks);
 	}
 
 	private <T> void shift(State previousState, T token, GlrCallback<T> callback, Collection<ItemStack> shiftedStacks) throws UnexpectedTokenException {
@@ -157,16 +155,25 @@ public final class State {
 	private State(Sapling sapling, Set<ItemStack> stackSet) {
 		this.sapling = sapling;
 		stacks = CopyList.immutable(stackSet);
-		stackIds = collectUsedStackIds(stacks);
 	}
 
-	private static Set<Object> collectUsedStackIds(List<ItemStack> stacks) {
-		return CopySet.immutableHash(stacks, stack -> stack.id);
-	}
 
+	public final List<? extends ItemStackView> viewStacks() {
+		return stacks;
+	}
 
 	public final Set<Object> getUsedStackIds() {
-		return stackIds;
+		return viewStacks().stream().map(ItemStackView::getId).collect(Collectors.toSet());
+	}
+
+	public final Set<Terminal> getExpectedNextSymbols() {
+		return stacks.stream()
+				.map(stack -> {
+					ASymbol expectedNextSymbol = stack.item.getExpectedNextSymbol();
+					assert expectedNextSymbol instanceof Terminal : "expected next symbol is not a Terminal";
+					return (Terminal) expectedNextSymbol;
+				})
+				.collect(Collectors.toSet());
 	}
 
 }
