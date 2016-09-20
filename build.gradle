@@ -1,14 +1,17 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'com.jfrog.bintray' version '1.7'
+}
+
 group 'org.msyu.parser'
 ext.pkgname = 'glr'
-version '0.0.1'
-
-apply plugin: 'java'
-apply plugin: 'maven-publish'
+version '0.1.0'
 
 sourceCompatibility = 1.8
 
 repositories {
-    mavenCentral()
+    jcenter()
 }
 
 dependencies {
@@ -36,6 +39,29 @@ publishing {
             artifact sourceJar {
                 classifier "sources"
             }
+        }
+    }
+}
+
+bintray {
+    user = bintrayUser
+    key = bintrayKey
+    publications = ['main']
+    dryRun = false
+    publish = false
+    pkg {
+        userOrg = 'ypoluektovich'
+        repo = 'msyu'
+        name = 'msyu-parser-' + project.name
+        desc = 'A GLR parser implementation'
+        websiteUrl = 'https://github.com/ypoluektovich/msyu-parser-glr'
+        issueTrackerUrl = 'https://github.com/ypoluektovich/msyu-parser-glr/issues'
+        vcsUrl = 'https://github.com/ypoluektovich/msyu-parser-glr.git'
+        licenses = ['MPL-2.0']
+        publicDownloadNumbers = true
+        version {
+            name = project.version
+            vcsTag = 'v' + project.version
         }
     }
 }
