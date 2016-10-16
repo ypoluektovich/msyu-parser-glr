@@ -47,4 +47,8 @@ public class CopyMap {
 		return immutableHashKV(src, Function.identity(), valueMapper);
 	}
 
+	public static <K, V> Map<K, V> immutableHash(Map<K, V> src) {
+		return immutableHashKV(src, Function.identity(), Function.identity());
+	}
+
 }

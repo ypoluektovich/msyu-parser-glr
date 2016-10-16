@@ -28,7 +28,7 @@ public class CopyList {
 		return Collections.unmodifiableList(dst);
 	}
 
-	public static <T> List<T> immutable(Collection<T> src) {
+	public static <T> List<T> immutable(Collection<? extends T> src) {
 		return immutable(src, Function.identity());
 	}
 
