@@ -37,13 +37,20 @@ public final class RptProduction implements NoopReducibleRichProduction {
 				builder.addProduction(body, nCopies(min, elementSymbol), call(appender, 0, min));
 				builder.addProduction(lhs, singletonList(body), call(finisher, 0, min));
 
-				NonTerminal prev = body;
-				int count = min;
-				while (count != max) {
-					NonTerminal next = builder.createInnerNonTerminal();
-					builder.addProduction(next, asList(prev, elementSymbol), call(appender, count, ++count));
-					builder.addProduction(lhs, singletonList(next), call(finisher, 0, count));
-					prev = next;
+				if (max != RptReducer.INF) {
+					NonTerminal prev = body;
+					int count = min;
+					while (count != max) {
+						NonTerminal next = builder.createInnerNonTerminal();
+						builder.addProduction(next, asList(prev, elementSymbol), call(appender, count, ++count));
+						builder.addProduction(lhs, singletonList(next), call(finisher, 0, count));
+						prev = next;
+					}
+				} else {
+					NonTerminal rec = builder.createInnerNonTerminal();
+					builder.addProduction(rec, asList(body, elementSymbol), call(appender, RptReducer.UNKNOWN, 1));
+					builder.addProduction(rec, asList(rec, elementSymbol), call(appender, RptReducer.UNKNOWN, 1));
+					builder.addProduction(lhs, singletonList(rec), call(finisher, 0, RptReducer.UNKNOWN));
 				}
 
 				return lhs;

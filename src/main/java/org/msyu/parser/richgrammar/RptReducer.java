@@ -8,4 +8,8 @@ public interface RptReducer {
 
 	RptReducer NOOP = (c, o, w, i) -> o;
 
+	int INF = Integer.MAX_VALUE;
+
+	int UNKNOWN = -1;
+
 }
