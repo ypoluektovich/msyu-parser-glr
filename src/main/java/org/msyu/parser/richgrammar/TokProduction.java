@@ -6,7 +6,7 @@ import org.msyu.parser.glr.NonTerminal;
 
 import java.util.List;
 
-public final class TokProduction {
+public final class TokProduction implements NoopReducibleRichProduction {
 
 	private final List<ASymbol> tokens;
 
@@ -23,6 +23,11 @@ public final class TokProduction {
 				return lhs;
 			}
 		};
+	}
+
+	@Override
+	public final RichProduction reduceNOOP() {
+		return reduce(BasicReducer.NOOP);
 	}
 
 }

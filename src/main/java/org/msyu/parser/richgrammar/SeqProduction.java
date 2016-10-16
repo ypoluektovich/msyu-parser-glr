@@ -7,7 +7,7 @@ import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 
-public final class SeqProduction {
+public final class SeqProduction implements NoopReducibleRichProduction {
 
 	private final List<RichProduction> productions;
 
@@ -28,6 +28,11 @@ public final class SeqProduction {
 				return lhs;
 			}
 		};
+	}
+
+	@Override
+	public final RichProduction reduceNOOP() {
+		return reduce(BasicReducer.NOOP);
 	}
 
 }

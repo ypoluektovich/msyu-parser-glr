@@ -7,7 +7,7 @@ import java.util.List;
 
 import static java.util.Collections.singletonList;
 
-public final class AltProduction {
+public final class AltProduction implements NoopReducibleRichProduction {
 
 	private final List<RichProduction> alternatives;
 
@@ -34,5 +34,9 @@ public final class AltProduction {
 		};
 	}
 
+	@Override
+	public final RichProduction reduceNOOP() {
+		return reduce(AltReducer.NOOP);
+	}
 
 }

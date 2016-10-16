@@ -75,28 +75,13 @@ public class RichGrammarExampleTest extends ReachTheGoalTestBase<Terminal, RichG
 		return depletedProduction.lhs;
 	}
 
-	RichProduction P1 = tok(p1).reduce((c, o) -> null);
-	RichProduction P2 = tok(p2).reduce((c, o) -> null);
+	RichProduction P1 = tok(p1).reduceNOOP();
+	RichProduction P2 = tok(p2).reduceNOOP();
 
-	NonTerminal M = install(
-			"M",
-			rpt(
-					0, 2,
-					tok(m).reduce((c, o) -> null)
-			).reduce(
-					(c, o, w, i) -> null,
-					(c, o, w, i) -> null
-			)
-	);
+	NonTerminal M = install("M", rpt(0, 2, tok(m).reduceNOOP()).reduceNOOP());
 
 	{
-		goal = install(
-				"Goal",
-				seq(
-						alt(P1, P2).reduce((c, o, i) -> null),
-						tok(M, s).reduce((c, o) -> null)
-				).reduce((c, o) -> null)
-		);
+		goal = install("Goal", seq(alt(P1, P2).reduceNOOP(), tok(M, s).reduceNOOP()).reduceNOOP());
 	}
 
 	@Test

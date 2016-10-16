@@ -7,7 +7,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.nCopies;
 import static java.util.Collections.singletonList;
 
-public final class RptProduction {
+public final class RptProduction implements NoopReducibleRichProduction {
 
 	private final int min;
 	private final int max;
@@ -55,4 +55,10 @@ public final class RptProduction {
 	private static BasicReducer call(RptReducer reducer, int was, int increase) {
 		return (gc, ob) -> reducer.reduce(gc, ob, was, increase);
 	}
+
+	@Override
+	public RichProduction reduceNOOP() {
+		return reduce(RptReducer.NOOP, RptReducer.NOOP);
+	}
+
 }
