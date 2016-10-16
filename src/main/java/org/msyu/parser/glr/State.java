@@ -119,14 +119,13 @@ public final class State {
 		boolean skipSaplingCheck = false;
 		if (nextInStack == null) {
 			lhsFitsExpected = true;
-		} else if (nextInStack.item.getExpectedNextSymbol() == item.production.lhs) {
-			lhsFitsExpected = true;
-			skipSaplingCheck = true;
-		} else if (sapling.grammar
-				.getAllInitializingNonTerminalsOf((NonTerminal) nextInStack.item.getExpectedNextSymbol())
-				.contains(item.production.lhs)
+		} else if (nextInStack.item.getExpectedNextSymbol() == item.production.lhs ||
+				sapling.grammar
+						.getAllInitializingNonTerminalsOf((NonTerminal) nextInStack.item.getExpectedNextSymbol())
+						.contains(item.production.lhs)
 		) {
 			lhsFitsExpected = true;
+			skipSaplingCheck = true;
 		}
 		return lhsFitsExpected &&
 				(skipSaplingCheck || sapling.allowedBlindReductionNonTerminals.contains(item.production.lhs));
