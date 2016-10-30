@@ -55,7 +55,9 @@ public final class GrammarBuilder extends GrammarFruit {
 				}
 		);
 		Production production = new Production(lhs, rhs);
-		nonTerminals.get(lhs).add(production);
+		if (!nonTerminals.get(lhs).add(production)) {
+			throw new GrammarException("trying to add duplicate production");
+		}
 		return production;
 	}
 
