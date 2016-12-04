@@ -20,14 +20,14 @@ public final class MultiState {
 	}
 
 	public final <T> MultiState advance(
-			Map<T, Object> startByToken,
+			Map<T, ?> startByToken,
 			GlrCallback<T> callback,
 			Object end,
-			Collection<Object> growingPositions
+			Collection<?> growingPositions
 	) throws UnexpectedTokensException {
 		List<State> endStates = new ArrayList<>();
 		List<UnexpectedTokenException> exceptions = new ArrayList<>();
-		for (Map.Entry<T, Object> tokenAndStart : startByToken.entrySet()) {
+		for (Map.Entry<T, ?> tokenAndStart : startByToken.entrySet()) {
 			T token = tokenAndStart.getKey();
 			Object start = tokenAndStart.getValue();
 			State state = stateByPosition.get(start);
@@ -50,7 +50,7 @@ public final class MultiState {
 		return new MultiState(this, endStates, end, growingPositions);
 	}
 
-	private MultiState(MultiState previousState, List<State> endStates, Object end, Collection<Object> growingPositions) {
+	private MultiState(MultiState previousState, List<State> endStates, Object end, Collection<?> growingPositions) {
 		Map<Object, State> stateByPosition = new HashMap<>();
 		for (Map.Entry<Object, State> positionAndState : previousState.stateByPosition.entrySet()) {
 			Object position = positionAndState.getKey();
