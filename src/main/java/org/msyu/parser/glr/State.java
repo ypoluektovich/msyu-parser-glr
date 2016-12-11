@@ -4,9 +4,13 @@ import org.msyu.javautil.cf.CopyList;
 import org.msyu.javautil.cf.CopySet;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -14,28 +18,79 @@ import java.util.stream.Collectors;
 public final class State {
 
 	private final Sapling sapling;
-	private final List<ItemStack> stacks;
+	private final Map<Object, List<ItemStack>> stacksByPosition;
 
-	public static State initializeFrom(Sapling sapling) {
-		return new State(sapling);
+	public static State initializeFrom(Sapling sapling, Object position) {
+		return new State(sapling, position);
 	}
 
-	private State(Sapling sapling) {
+	private State(Sapling sapling, Object initialPosition) {
 		this.sapling = sapling;
-		this.stacks = CopyList.immutable(sapling.initialItems, item -> new ItemStack(null, item.position, item, null));
+		this.stacksByPosition = Collections.singletonMap(
+				initialPosition,
+				CopyList.immutable(sapling.initialItems, item -> new ItemStack(null, item.position, item, null))
+		);
 	}
 
-	public final <T> State advance(T token, GlrCallback<T> callback) throws UnexpectedTokenException {
-		return new State(this, token, callback);
+	public final <T> State advance(
+			Map<T, ?> startByToken,
+			GlrCallback<T> callback,
+			Object end,
+			Collection<?> growingPositions
+	) throws UnexpectedTokensException {
+		return new State(this, startByToken, callback, end, growingPositions);
 	}
 
-	private <T> State(State previousState, T token, GlrCallback<T> callback) throws UnexpectedTokenException {
+	private <T> State(
+			State previousState,
+			Map<T, ?> startByToken,
+			GlrCallback<T> callback,
+			Object end,
+			Collection<?> growingPositions
+	) throws UnexpectedTokensException {
 		this.sapling = previousState.sapling;
 
+		Set<ItemStack> endStacks = new HashSet<>();
+		List<UnexpectedTokenException> exceptions = new ArrayList<>();
+		for (Map.Entry<T, ?> tokenAndStart : startByToken.entrySet()) {
+			T token = tokenAndStart.getKey();
+			Object start = tokenAndStart.getValue();
+			List<ItemStack> stacks = previousState.stacksByPosition.get(start);
+			if (stacks == null) {
+				throw new IllegalArgumentException("no stacks registered for position " + start);
+			}
+			try {
+				endStacks.addAll(advance(stacks, token, callback));
+			} catch (UnexpectedTokenException e) {
+				exceptions.add(e);
+			}
+		}
+		if (!exceptions.isEmpty() && endStacks.isEmpty()) {
+			UnexpectedTokensException exception = new UnexpectedTokensException();
+			for (UnexpectedTokenException e : exceptions) {
+				exception.addSuppressed(e);
+			}
+			throw exception;
+		}
+
+		Map<Object, List<ItemStack>> stacksByPosition = new HashMap<>();
+		for (Map.Entry<Object, List<ItemStack>> positionAndStacks : previousState.stacksByPosition.entrySet()) {
+			Object position = positionAndStacks.getKey();
+			if (growingPositions.contains(position)) {
+				stacksByPosition.put(position, positionAndStacks.getValue());
+			}
+		}
+		if (!endStacks.isEmpty()) {
+			stacksByPosition.put(end, CopyList.immutable(endStacks));
+		}
+		this.stacksByPosition = Collections.unmodifiableMap(stacksByPosition);
+	}
+
+	private <T> Collection<ItemStack> advance(List<ItemStack> stacks, T token, GlrCallback<T> callback) throws UnexpectedTokenException {
 		Queue<ItemStack> stacksQueue = new ArrayDeque<>();
 		Set<ItemStack> stacksSet = new HashSet<>();
 
-		shift(previousState, token, callback, stacksQueue);
+		shift(stacks, token, callback, stacksQueue);
 
 		reduce(stacksQueue, stacksSet, callback);
 
@@ -44,19 +99,19 @@ public final class State {
 
 		expand(stacksQueue, stacksSet);
 
-		this.stacks = CopyList.immutable(stacksSet);
+		return stacksSet;
 	}
 
-	private <T> void shift(State previousState, T token, GlrCallback<T> callback, Collection<ItemStack> shiftedStacks) throws UnexpectedTokenException {
+	private <T> void shift(List<ItemStack> stacks, T token, GlrCallback<T> callback, Collection<ItemStack> shiftedStacks) throws UnexpectedTokenException {
 		Terminal terminal = callback.getSymbolOfToken(token);
-		for (ItemStack oldStack : previousState.stacks) {
+		for (ItemStack oldStack : stacks) {
 			if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
 				shiftedStacks.add(oldStack.shift(callback, token));
 			}
 		}
 		if (shiftedStacks.isEmpty()) {
 			throw new UnexpectedTokenException(
-					CopySet.immutableHash(previousState.stacks, stack -> (Terminal) stack.item.getExpectedNextSymbol()),
+					CopySet.immutableHash(stacks, stack -> (Terminal) stack.item.getExpectedNextSymbol()),
 					terminal,
 					token
 			);
@@ -131,48 +186,27 @@ public final class State {
 				(skipSaplingCheck || sapling.allowedBlindReductionNonTerminals.contains(item.production.lhs));
 	}
 
-	public static State join(Iterable<State> states) {
-		if (states == null) {
-			throw new IllegalArgumentException("states collection must be non-null");
-		}
-		Sapling sapling = null;
-		Set<ItemStack> stacks = new HashSet<>();
-		for (State state : states) {
-			if (sapling == null) {
-				sapling = state.sapling;
-			} else if (sapling != state.sapling) {
-				throw new IllegalArgumentException("all joining states must grow from the same sapling");
-			}
-			stacks.addAll(state.stacks);
-		}
-		if (sapling == null) {
-			throw new IllegalArgumentException("states collection must be non-empty");
-		}
-		return new State(sapling, stacks);
-	}
-
-	private State(Sapling sapling, Set<ItemStack> stackSet) {
-		this.sapling = sapling;
-		stacks = CopyList.immutable(stackSet);
-	}
-
-
-	public final List<? extends ItemStackView> viewStacks() {
-		return stacks;
-	}
+	// TODO: 2016-12-11 reimplement
+//	public final List<? extends ItemStackView> getStacks() {
+//		return stacks;
+//	}
 
 	public final Set<Object> getUsedStackIds() {
-		return viewStacks().stream().map(ItemStackView::getId).collect(Collectors.toSet());
-	}
-
-	public final Set<Terminal> getExpectedNextSymbols() {
-		return stacks.stream()
-				.map(stack -> {
-					ASymbol expectedNextSymbol = stack.item.getExpectedNextSymbol();
-					assert expectedNextSymbol instanceof Terminal : "expected next symbol is not a Terminal";
-					return (Terminal) expectedNextSymbol;
-				})
+		return stacksByPosition.values().stream()
+				.flatMap(Collection::stream)
+				.map(ItemStackView::getId)
 				.collect(Collectors.toSet());
 	}
+
+	// TODO: 2016-12-11 reimplement
+//	public final Set<Terminal> getExpectedNextSymbols() {
+//		return stacks.stream()
+//				.map(stack -> {
+//					ASymbol expectedNextSymbol = stack.item.getExpectedNextSymbol();
+//					assert expectedNextSymbol instanceof Terminal : "expected next symbol is not a Terminal";
+//					return (Terminal) expectedNextSymbol;
+//				})
+//				.collect(Collectors.toSet());
+//	}
 
 }

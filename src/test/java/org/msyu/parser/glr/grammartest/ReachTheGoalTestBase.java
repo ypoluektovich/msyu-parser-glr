@@ -8,8 +8,8 @@ import org.msyu.parser.glr.GrammarBuilder;
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Production;
 import org.msyu.parser.glr.Sapling;
+import org.msyu.parser.glr.ScannerlessState;
 import org.msyu.parser.glr.SingleGrammarTestBase;
-import org.msyu.parser.glr.State;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -26,7 +26,7 @@ public abstract class ReachTheGoalTestBase<T, C extends GlrCallback<T>> extends 
 
 	@Spy protected C callback;
 
-	protected State state;
+	protected ScannerlessState state;
 
 	@BeforeClass
 	public void finishRTGInit() {
@@ -37,7 +37,7 @@ public abstract class ReachTheGoalTestBase<T, C extends GlrCallback<T>> extends 
 	@BeforeMethod
 	public void beforeMethod() {
 		MockitoAnnotations.initMocks(this);
-		state = State.initializeFrom(sapling);
+		state = ScannerlessState.initializeFrom(sapling);
 	}
 
 	@AfterMethod
