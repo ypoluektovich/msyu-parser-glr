@@ -14,6 +14,12 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.unmodifiableList;
+import static java.util.stream.Collectors.toList;
 
 public final class State {
 
@@ -28,7 +34,10 @@ public final class State {
 		this.sapling = sapling;
 		this.stacksByPosition = Collections.singletonMap(
 				initialPosition,
-				CopyList.immutable(sapling.initialItems, item -> new ItemStack(null, item.position, item, null))
+				CopyList.immutable(
+						sapling.initialItems,
+						item -> new ItemStack(null, item.position, item, null, initialPosition, emptySet(), emptyList())
+				)
 		);
 	}
 
@@ -50,8 +59,9 @@ public final class State {
 	) throws UnexpectedTokensException {
 		this.sapling = previousState.sapling;
 
-		Set<ItemStack> endStacks = new HashSet<>();
+		Collection<ItemStack> endStacks = new HashSet<>();
 		List<UnexpectedTokenException> exceptions = new ArrayList<>();
+		Set<GreedMark> marksToCull = new HashSet<>();
 		for (Map.Entry<T, ?> tokenAndStart : startByToken.entrySet()) {
 			T token = tokenAndStart.getKey();
 			Object start = tokenAndStart.getValue();
@@ -60,7 +70,7 @@ public final class State {
 				throw new IllegalArgumentException("no stacks registered for position " + start);
 			}
 			try {
-				endStacks.addAll(advance(stacks, token, callback));
+				endStacks.addAll(advance(stacks, token, callback, end, marksToCull));
 			} catch (UnexpectedTokenException e) {
 				exceptions.add(e);
 			}
@@ -77,27 +87,37 @@ public final class State {
 		for (Map.Entry<Object, List<ItemStack>> positionAndStacks : previousState.stacksByPosition.entrySet()) {
 			Object position = positionAndStacks.getKey();
 			if (growingPositions.contains(position)) {
-				stacksByPosition.put(position, positionAndStacks.getValue());
+				List<ItemStack> remainingStacks = cull(positionAndStacks.getValue(), marksToCull);
+				if (!remainingStacks.isEmpty()) {
+					stacksByPosition.put(position, remainingStacks);
+				}
 			}
 		}
+		endStacks = cull(endStacks, marksToCull);
 		if (!endStacks.isEmpty()) {
-			stacksByPosition.put(end, CopyList.immutable(endStacks));
+			stacksByPosition.put(end, mergeMarks(endStacks));
 		}
 		this.stacksByPosition = Collections.unmodifiableMap(stacksByPosition);
 	}
 
-	private <T> Collection<ItemStack> advance(List<ItemStack> stacks, T token, GlrCallback<T> callback) throws UnexpectedTokenException {
+	private <T> Collection<ItemStack> advance(
+			List<ItemStack> stacks,
+			T token,
+			GlrCallback<T> callback,
+			Object endPosition,
+			Set<GreedMark> marksToCull
+	) throws UnexpectedTokenException {
 		Queue<ItemStack> stacksQueue = new ArrayDeque<>();
 		Set<ItemStack> stacksSet = new HashSet<>();
 
 		shift(stacks, token, callback, stacksQueue);
 
-		reduce(stacksQueue, stacksSet, callback);
+		reduce(stacksQueue, stacksSet, callback, marksToCull);
 
 		stacksQueue.addAll(stacksSet);
 		stacksSet.clear();
 
-		expand(stacksQueue, stacksSet);
+		expand(stacksQueue, stacksSet, endPosition);
 
 		return stacksSet;
 	}
@@ -118,7 +138,12 @@ public final class State {
 		}
 	}
 
-	private void reduce(Queue<ItemStack> reductionQueue, Collection<ItemStack> reducedStacks, GlrCallback<?> callback) {
+	private void reduce(
+			Queue<ItemStack> reductionQueue,
+			Collection<ItemStack> reducedStacks,
+			GlrCallback<?> callback,
+			Set<GreedMark> marksToCull
+	) {
 		for (ItemStack stack; (stack = reductionQueue.poll()) != null; ) {
 			if (!stack.item.isFinished()) {
 				if (sapling.grammar.isCompletable(stack.item)) {
@@ -133,6 +158,10 @@ public final class State {
 
 			Object reducedBranchId = callback.reduce(stack.id, completedProduction);
 
+			if (completedProduction.isGreedy) {
+				marksToCull.add(stack.getGreedMark());
+			}
+
 			for (Item newItem : sapling.grammar.getItemsInitializedBy(completedSymbol)) {
 				if (itemIsGoodAsBlindReductionTarget(newItem, nextInStack)) {
 					reductionQueue.add(stack.finishBlindReduction(callback, reducedBranchId, newItem));
@@ -140,12 +169,12 @@ public final class State {
 			}
 
 			if (nextInStack != null && nextInStack.item.getExpectedNextSymbol().equals(completedSymbol)) {
-				reductionQueue.add(nextInStack.finishGuidedReduction(callback, reducedBranchId));
+				reductionQueue.add(nextInStack.finishGuidedReduction(stack, callback, reducedBranchId));
 			}
 		}
 	}
 
-	private void expand(Queue<ItemStack> expansionQueue, Collection<ItemStack> expandedStacks) {
+	private void expand(Queue<ItemStack> expansionQueue, Collection<ItemStack> expandedStacks, Object position) {
 		for (ItemStack stack; (stack = expansionQueue.poll()) != null; ) {
 			Item item = stack.item;
 			do {
@@ -157,7 +186,15 @@ public final class State {
 					} else if (nextSymbol instanceof NonTerminal) {
 						NonTerminal nextNonTerminal = (NonTerminal) nextSymbol;
 						for (Item nextItem : sapling.grammar.getAllInitializingItemsOf(nextNonTerminal)) {
-							expandedStacks.add(new ItemStack(stack.id, nextItem.position, nextItem, stack.copyWithNoId()));
+							expandedStacks.add(new ItemStack(
+									stack.id,
+									nextItem.position,
+									nextItem,
+									stack.copyForChild(),
+									position,
+									stack.greedMarks,
+									stack.newGreedMarks
+							));
 						}
 					}
 				}
@@ -186,27 +223,55 @@ public final class State {
 				(skipSaplingCheck || sapling.allowedBlindReductionNonTerminals.contains(item.production.lhs));
 	}
 
-	// TODO: 2016-12-11 reimplement
-//	public final List<? extends ItemStackView> getStacks() {
-//		return stacks;
-//	}
+	private static List<ItemStack> cull(Collection<ItemStack> stacks, Set<GreedMark> marksToCull) {
+		List<ItemStack> remainingStacks = new ArrayList<>();
+		for (ItemStack stack : stacks) {
+			if (Collections.disjoint(stack.greedMarks, marksToCull)) {
+				remainingStacks.add(stack);
+			}
+		}
+		return unmodifiableList(remainingStacks);
+	}
+
+	private static List<ItemStack> mergeMarks(Collection<ItemStack> stacks) {
+		List<ItemStack> merged = new ArrayList<>();
+		for (ItemStack stack : stacks) {
+			merged.add(stack.mergeMarks());
+		}
+		return unmodifiableList(merged);
+	}
+
+
+	private final Stream<ItemStack> streamStacks0() {
+		return stacksByPosition.values().stream().flatMap(List::stream);
+	}
+
+	public final Stream<ItemStackView> streamStacks() {
+		return streamStacks0().map(ItemStackView.class::cast);
+	}
+
+	public final List<? extends ItemStackView> getStacks() {
+		return streamStacks().collect(toList());
+	}
 
 	public final Set<Object> getUsedStackIds() {
-		return stacksByPosition.values().stream()
-				.flatMap(Collection::stream)
+		return streamStacks0()
 				.map(ItemStackView::getId)
 				.collect(Collectors.toSet());
 	}
 
-	// TODO: 2016-12-11 reimplement
-//	public final Set<Terminal> getExpectedNextSymbols() {
-//		return stacks.stream()
-//				.map(stack -> {
-//					ASymbol expectedNextSymbol = stack.item.getExpectedNextSymbol();
-//					assert expectedNextSymbol instanceof Terminal : "expected next symbol is not a Terminal";
-//					return (Terminal) expectedNextSymbol;
-//				})
-//				.collect(Collectors.toSet());
-//	}
+	public final Set<Object> getUsedStartPositions() {
+		return stacksByPosition.keySet();
+	}
+
+	public final Set<Terminal> getExpectedNextSymbols() {
+		return streamStacks0()
+				.map(stack -> {
+					ASymbol expectedNextSymbol = stack.item.getExpectedNextSymbol();
+					assert expectedNextSymbol instanceof Terminal : "expected next symbol is not a Terminal";
+					return (Terminal) expectedNextSymbol;
+				})
+				.collect(Collectors.toSet());
+	}
 
 }

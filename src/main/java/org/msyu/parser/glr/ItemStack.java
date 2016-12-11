@@ -1,8 +1,14 @@
 package org.msyu.parser.glr;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.unmodifiableSet;
 
 final class ItemStack implements ItemStackView, ItemStackFrame {
 
@@ -10,13 +16,27 @@ final class ItemStack implements ItemStackView, ItemStackFrame {
 	private final int prependedEmptySymbols;
 	final Item item;
 	final ItemStack nextInStack;
-	private volatile ItemStack copyWithNoId;
+	private final Object start;
+	final Set<GreedMark> greedMarks;
+	final List<GreedMark> newGreedMarks;
+	private volatile ItemStack copyForChild;
 
-	ItemStack(Object id, int prependedEmptySymbols, Item item, ItemStack nextInStack) {
+	ItemStack(
+			Object id,
+			int prependedEmptySymbols,
+			Item item,
+			ItemStack nextInStack,
+			Object start,
+			Set<GreedMark> greedMarks,
+			List<GreedMark> newGreedMarks
+	) {
 		this.id = id;
 		this.prependedEmptySymbols = prependedEmptySymbols;
 		this.item = item;
 		this.nextInStack = nextInStack;
+		this.start = start;
+		this.greedMarks = greedMarks;
+		this.newGreedMarks = newGreedMarks;
 	}
 
 	final <T> ItemStack shift(GlrCallback<T> callback, T token) {
@@ -24,7 +44,10 @@ final class ItemStack implements ItemStackView, ItemStackFrame {
 				callback.shift(id, item.getCompletedSymbols(prependedEmptySymbols), token),
 				0,
 				item.shift(),
-				nextInStack
+				nextInStack,
+				start,
+				greedMarks,
+				emptyList()
 		);
 	}
 
@@ -35,7 +58,10 @@ final class ItemStack implements ItemStackView, ItemStackFrame {
 				callback.skip(id, rhs.subList(item.position, rhs.size())),
 				0,
 				production.items.get(rhs.size()),
-				nextInStack
+				nextInStack,
+				start,
+				greedMarks,
+				newGreedMarks
 		);
 	}
 
@@ -47,35 +73,65 @@ final class ItemStack implements ItemStackView, ItemStackFrame {
 				callback.insert(reducedBranchId, newItem.getCompletedSymbols()),
 				0,
 				newItem.shift(),
-				nextInStack
+				nextInStack,
+				start,
+				greedMarks,
+				addGreedMark(newGreedMarks, getGreedMark())
 		);
 	}
 
 	/**
 	 * Called on the stack <em>into</em> which the reduction happened.
 	 */
-	final ItemStack finishGuidedReduction(GlrCallback<?> callback, Object reducedBranchId) {
+	final ItemStack finishGuidedReduction(ItemStack completedStack, GlrCallback<?> callback, Object reducedBranchId) {
 		return new ItemStack(
 				callback.insert(reducedBranchId, item.getCompletedSymbols(prependedEmptySymbols)),
 				0,
 				item.shift(),
-				nextInStack
+				nextInStack,
+				start,
+				completedStack.greedMarks,
+				addGreedMark(completedStack.newGreedMarks, completedStack.getGreedMark())
 		);
 	}
 
 	final ItemStack skipTo(Item item) {
 		assert this.item.production == item.production : "ItemStack.skipTo() called with an item from another production";
-		return new ItemStack(id, prependedEmptySymbols + item.position - this.item.position, item, nextInStack);
+		return new ItemStack(id, prependedEmptySymbols + item.position - this.item.position, item, nextInStack, start, greedMarks, newGreedMarks);
 	}
 
-	final ItemStack copyWithNoId() {
-		ItemStack copyWithNoId = this.copyWithNoId;
-		if (copyWithNoId == null) {
+	final ItemStack copyForChild() {
+		ItemStack copyForChild = this.copyForChild;
+		if (copyForChild == null) {
 			// Even if we overwrite some other thread's value, it doesn't matter, so no locks or CAS are required.
-			copyWithNoId = this.copyWithNoId = new ItemStack(null, prependedEmptySymbols, item, nextInStack);
+			copyForChild = this.copyForChild = new ItemStack(null, prependedEmptySymbols, item, nextInStack, start, emptySet(), emptyList());
 		}
-		return copyWithNoId;
+		return copyForChild;
 	}
+
+	final GreedMark getGreedMark() {
+		return item.production.getGreedMark(start);
+	}
+
+	private static List<GreedMark> addGreedMark(List<GreedMark> src, GreedMark myMark) {
+		if (myMark == null) {
+			return src;
+		}
+		List<GreedMark> copy = new ArrayList<>(src.size() + 1);
+		copy.addAll(src);
+		copy.add(myMark);
+		return copy;
+	}
+
+	final ItemStack mergeMarks() {
+		if (newGreedMarks.isEmpty()) {
+			return this;
+		}
+		Set<GreedMark> mergedMarks = new HashSet<>(greedMarks);
+		mergedMarks.addAll(newGreedMarks);
+		return new ItemStack(id, prependedEmptySymbols, item, nextInStack, start, unmodifiableSet(mergedMarks), emptyList());
+	}
+
 
 	@Override
 	public final boolean equals(Object obj) {
@@ -89,12 +145,15 @@ final class ItemStack implements ItemStackView, ItemStackFrame {
 		return prependedEmptySymbols == that.prependedEmptySymbols &&
 				Objects.equals(id, that.id) &&
 				item.equals(that.item) &&
-				Objects.equals(nextInStack, that.nextInStack);
+				Objects.equals(nextInStack, that.nextInStack) &&
+				Objects.equals(start, that.start) &&
+				greedMarks.equals(that.greedMarks) &&
+				newGreedMarks.equals(that.newGreedMarks);
 	}
 
 	@Override
 	public final int hashCode() {
-		return Objects.hash(id, prependedEmptySymbols, item, nextInStack);
+		return Objects.hash(id, prependedEmptySymbols, item, nextInStack, start, greedMarks, newGreedMarks);
 	}
 
 	@Override

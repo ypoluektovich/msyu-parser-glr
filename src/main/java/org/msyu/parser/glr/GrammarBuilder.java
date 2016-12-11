@@ -29,7 +29,7 @@ public final class GrammarBuilder extends GrammarFruit {
 		return symbol;
 	}
 
-	public final Production addProduction(NonTerminal lhs, List<ASymbol> rhs) {
+	public final Production addProduction(NonTerminal lhs, List<ASymbol> rhs, boolean isGreedy) {
 		if (!nonTerminals.containsKey(lhs)) {
 			throw new IllegalArgumentException("production lhs must be a non-terminal from this grammar");
 		}
@@ -54,7 +54,7 @@ public final class GrammarBuilder extends GrammarFruit {
 					}
 				}
 		);
-		Production production = new Production(lhs, rhs);
+		Production production = new Production(lhs, rhs, isGreedy);
 		if (!nonTerminals.get(lhs).add(production)) {
 			throw new GrammarException("trying to add duplicate production");
 		}
@@ -62,7 +62,11 @@ public final class GrammarBuilder extends GrammarFruit {
 	}
 
 	public final Production addProduction(NonTerminal lhs, ASymbol... rhs) {
-		return addProduction(lhs, rhs == null ? null : Arrays.asList(rhs));
+		return addProduction(lhs, rhs == null ? null : Arrays.asList(rhs), false);
+	}
+
+	public final Production addGreedyProduction(NonTerminal lhs, ASymbol... rhs) {
+		return addProduction(lhs, rhs == null ? null : Arrays.asList(rhs), true);
 	}
 
 	public final Grammar build() {

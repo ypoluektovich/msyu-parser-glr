@@ -14,7 +14,7 @@ public class NoDuplicateProductionsTest {
 		Production p = gb.addProduction(N, t);
 
 		// when
-		gb.addProduction(p.lhs, p.rhs);
+		gb.addProduction(p.lhs, p.rhs, false);
 
 		// then must throw
 	}
