@@ -100,9 +100,11 @@ public final class State {
 				stacksByPosition.put(position, remainingStacks);
 			}
 		}
-		List<ItemStack> endStacks = cull(endStacksSet, marksToCull);
-		if (!endStacks.isEmpty()) {
-			stacksByPosition.put(end, endStacks);
+		if (growingPositions.contains(end)) {
+			List<ItemStack> endStacks = cull(endStacksSet, marksToCull);
+			if (!endStacks.isEmpty()) {
+				stacksByPosition.put(end, endStacks);
+			}
 		}
 
 		for (Map.Entry<Object, List<ItemStack>> posAndStacks : stacksByPosition.entrySet()) {

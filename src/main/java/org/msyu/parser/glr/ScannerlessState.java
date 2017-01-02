@@ -2,7 +2,7 @@ package org.msyu.parser.glr;
 
 import java.util.Set;
 
-import static java.util.Collections.emptyList;
+import static java.util.Collections.singleton;
 import static java.util.Collections.singletonMap;
 import static java.util.Objects.requireNonNull;
 
@@ -27,7 +27,7 @@ public final class ScannerlessState {
 	private <T> ScannerlessState(ScannerlessState prevState, T token, GlrCallback<T> callback) throws UnexpectedTokenException {
 		position = prevState.position + 1;
 		try {
-			state = prevState.state.advance(singletonMap(token, prevState.position), callback, position, emptyList());
+			state = prevState.state.advance(singletonMap(token, prevState.position), callback, position, singleton(position));
 		} catch (UnexpectedTokensException e) {
 			throw (UnexpectedTokenException) e.getSuppressed()[0];
 		}
