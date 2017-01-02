@@ -33,7 +33,7 @@ public class SkippableSymbolInTheMiddle extends ReachTheGoalTestBase<Terminal, L
 		state = callback.advance(state, prefix);
 		state = callback.advance(state, suffix);
 
-		verify(callback).reduce(any(), eq(goalProduction));
+		verify(callback).reduce(any(), eq(goalProduction), any());
 	}
 
 	@Test
@@ -42,7 +42,7 @@ public class SkippableSymbolInTheMiddle extends ReachTheGoalTestBase<Terminal, L
 		state = callback.advance(state, middle);
 		state = callback.advance(state, suffix);
 
-		verify(callback).reduce(any(), eq(goalProduction));
+		verify(callback).reduce(any(), eq(goalProduction), any());
 	}
 
 }

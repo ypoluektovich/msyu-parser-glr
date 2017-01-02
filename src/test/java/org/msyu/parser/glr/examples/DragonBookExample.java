@@ -49,7 +49,7 @@ public class DragonBookExample extends ReachTheGoalTestBase<Terminal, LoggingCal
 		state = callback.advance(state, num);
 		state = callback.advance(state, eof);
 
-		verify(callback).reduce(any(), eq(goalProduction));
+		verify(callback).reduce(any(), eq(goalProduction), any());
 	}
 
 }

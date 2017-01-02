@@ -1,16 +1,19 @@
 package org.msyu.parser.glr.examples;
 
 import org.msyu.parser.glr.GlrCallback;
+import org.msyu.parser.glr.Lifeline;
 import org.msyu.parser.glr.Terminal;
 import org.msyu.parser.glr.UnexpectedTokenException;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.verify;
 import static org.testng.Assert.assertEquals;
 
@@ -23,7 +26,7 @@ public class NaiveAst extends SimpleCalculatorBase<SimpleCalculatorBase.Token, G
 	@Override
 	public void beforeMethod() {
 		callback = new NaiveAstCallback<SimpleCalculatorBase.Token>(
-				(production, stuffToStack) -> {
+				(production, stuffToStack, branchId, lifeline) -> {
 					if (production == goalProduction) {
 						result = stuffToStack;
 					}
@@ -37,6 +40,10 @@ public class NaiveAst extends SimpleCalculatorBase<SimpleCalculatorBase.Token, G
 			@Override
 			protected Object getStackableToken(SimpleCalculatorBase.Token token) {
 				return token.terminal == num ? token.value : token.terminal;
+			}
+
+			@Override
+			public void cutLifelines(Predicate<Lifeline> lifelineIsCut) {
 			}
 		};
 		super.beforeMethod();
@@ -61,7 +68,7 @@ public class NaiveAst extends SimpleCalculatorBase<SimpleCalculatorBase.Token, G
 			state = state.advance(token, callback);
 		}
 
-		verify(callback).reduce(any(), eq(goalProduction));
+		verify(callback).reduce(any(), eq(goalProduction), any());
 		assertEquals(
 				result,
 				asList(

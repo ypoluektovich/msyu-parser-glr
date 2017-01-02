@@ -3,6 +3,7 @@ package org.msyu.parser.glr.examples;
 import org.mockito.Mock;
 import org.msyu.parser.glr.ASymbol;
 import org.msyu.parser.glr.GlrCallback;
+import org.msyu.parser.glr.Lifeline;
 import org.msyu.parser.glr.Production;
 import org.msyu.parser.treestack.TreeStack;
 
@@ -11,7 +12,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 
 import static org.msyu.javautil.cf.Iterators.concat;
 import static org.msyu.javautil.cf.Iterators.singletonIterator;
@@ -19,10 +19,14 @@ import static org.msyu.javautil.cf.Iterators.singletonIterator;
 public abstract class NaiveAstCallback<T> implements GlrCallback<T> {
 
 	private final TreeStack<Object> stack = new TreeStack<>();
-	@Mock public final BiConsumer<Production, Object> reductionCallback;
+	@Mock public final ReductionCallback reductionCallback;
 
-	public NaiveAstCallback(BiConsumer<Production, Object> reductionCallback) {
+	public NaiveAstCallback(ReductionCallback reductionCallback) {
 		this.reductionCallback = reductionCallback;
+	}
+
+	public interface ReductionCallback {
+		void reduced(Production production, Object toStack, Object branchId, Lifeline lifeline);
 	}
 
 	protected Iterator<Object> emptySymbolsToTokens(List<ASymbol> prependedEmptySymbols) {
@@ -49,7 +53,7 @@ public abstract class NaiveAstCallback<T> implements GlrCallback<T> {
 	}
 
 	@Override
-	public Object reduce(Object oldBranch, Production production) {
+	public Object reduce(Object oldBranch, Production production, Lifeline lifeline) {
 		List<Object> stuffList = new ArrayList<>();
 		Object popped = stack.pop(oldBranch, production.rhs.size(), thing -> stuffList.add(0, thing));
 		Object stuffToStack;
@@ -59,8 +63,9 @@ public abstract class NaiveAstCallback<T> implements GlrCallback<T> {
 			stuffList.add(0, production.lhs);
 			stuffToStack = stuffList;
 		}
-		reductionCallback.accept(production, stuffToStack);
-		return stack.push(popped, singletonIterator(stuffToStack));
+		Object pushed = stack.push(popped, singletonIterator(stuffToStack));
+		reductionCallback.reduced(production, stuffToStack, pushed, lifeline);
+		return pushed;
 	}
 
 	@Override

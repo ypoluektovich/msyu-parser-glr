@@ -31,7 +31,7 @@ public class LeftRecursion extends ReachTheGoalTestBase<Terminal, LoggingCallbac
 	public void zero() throws UnexpectedTokenException {
 		state = callback.advance(state, suffix);
 
-		verify(callback).reduce(any(), eq(goalProduction));
+		verify(callback).reduce(any(), eq(goalProduction), any());
 	}
 
 	@Test
@@ -39,7 +39,7 @@ public class LeftRecursion extends ReachTheGoalTestBase<Terminal, LoggingCallbac
 		state = callback.advance(state, prefix);
 		state = callback.advance(state, suffix);
 
-		verify(callback).reduce(any(), eq(goalProduction));
+		verify(callback).reduce(any(), eq(goalProduction), any());
 	}
 
 	@Test
@@ -48,7 +48,7 @@ public class LeftRecursion extends ReachTheGoalTestBase<Terminal, LoggingCallbac
 		state = callback.advance(state, prefix);
 		state = callback.advance(state, suffix);
 
-		verify(callback).reduce(any(), eq(goalProduction));
+		verify(callback).reduce(any(), eq(goalProduction), any());
 	}
 
 }

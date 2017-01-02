@@ -5,6 +5,7 @@ import java.util.List;
 public final class Item {
 
 	private static final String SPACE_ARROW = " \u2192";
+	private static final String SPACE_DOUBLE_ARROW = " \u21c9";
 	private static final String SPACE_EPSILON = " \u03B5";
 	private static final String SPACE_BULLET = " \u2022";
 
@@ -48,7 +49,7 @@ public final class Item {
 	static String toString(Production production, int position) {
 		StringBuilder sb = new StringBuilder();
 		sb.append(production.lhs.name);
-		sb.append(SPACE_ARROW);
+		sb.append(production.isGreedy ? SPACE_DOUBLE_ARROW : SPACE_ARROW);
 		if (production.rhs.isEmpty()) {
 			sb.append(SPACE_EPSILON);
 		} else {

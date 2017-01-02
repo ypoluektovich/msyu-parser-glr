@@ -1,6 +1,7 @@
 package org.msyu.parser.glr;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -65,6 +66,30 @@ final class ItemStack implements ItemStackView, ItemStackFrame {
 		);
 	}
 
+	final ItemStack maybeAddGreedMark(Collection<GreedMark> marksToCull) {
+		GreedMark greedMark = item.production.getGreedMark(start);
+		if (greedMark == null) {
+			return this;
+		}
+		marksToCull.add(greedMark);
+		return new ItemStack(
+				id,
+				prependedEmptySymbols,
+				item,
+				nextInStack,
+				start,
+				greedMarks,
+				addGreedMark(newGreedMarks, greedMark)
+		);
+	}
+
+	private static List<GreedMark> addGreedMark(List<GreedMark> src, GreedMark myMark) {
+		List<GreedMark> copy = new ArrayList<>(src.size() + 1);
+		copy.addAll(src);
+		copy.add(myMark);
+		return copy;
+	}
+
 	/**
 	 * Called on the stack <em>being reduced</em>.
 	 */
@@ -76,7 +101,7 @@ final class ItemStack implements ItemStackView, ItemStackFrame {
 				nextInStack,
 				start,
 				greedMarks,
-				addGreedMark(newGreedMarks, getGreedMark())
+				newGreedMarks
 		);
 	}
 
@@ -91,7 +116,7 @@ final class ItemStack implements ItemStackView, ItemStackFrame {
 				nextInStack,
 				start,
 				completedStack.greedMarks,
-				addGreedMark(completedStack.newGreedMarks, completedStack.getGreedMark())
+				newGreedMarks
 		);
 	}
 
@@ -109,26 +134,17 @@ final class ItemStack implements ItemStackView, ItemStackFrame {
 		return copyForChild;
 	}
 
-	final GreedMark getGreedMark() {
-		return item.production.getGreedMark(start);
+	final boolean isCulledByMark(GreedMark mark) {
+		return greedMarks.contains(mark) && !newGreedMarks.contains(mark);
 	}
 
-	private static List<GreedMark> addGreedMark(List<GreedMark> src, GreedMark myMark) {
-		if (myMark == null) {
-			return src;
+	final ItemStack forgetAndMergeMarks(Collection<Object> witheredPositions) {
+		Set<GreedMark> mergedMarks = new HashSet<>(newGreedMarks);
+		for (GreedMark mark : greedMarks) {
+			if (!witheredPositions.contains(mark.startPosition)) {
+				mergedMarks.add(mark);
+			}
 		}
-		List<GreedMark> copy = new ArrayList<>(src.size() + 1);
-		copy.addAll(src);
-		copy.add(myMark);
-		return copy;
-	}
-
-	final ItemStack mergeMarks() {
-		if (newGreedMarks.isEmpty()) {
-			return this;
-		}
-		Set<GreedMark> mergedMarks = new HashSet<>(greedMarks);
-		mergedMarks.addAll(newGreedMarks);
 		return new ItemStack(id, prependedEmptySymbols, item, nextInStack, start, unmodifiableSet(mergedMarks), emptyList());
 	}
 

@@ -2,6 +2,7 @@ package org.msyu.parser.glr.examples;
 
 import org.msyu.parser.glr.ASymbol;
 import org.msyu.parser.glr.GlrCallback;
+import org.msyu.parser.glr.Lifeline;
 import org.msyu.parser.glr.Production;
 import org.msyu.parser.glr.Terminal;
 import org.msyu.parser.glr.UnexpectedTokenException;
@@ -14,6 +15,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
 import static org.mockito.Matchers.any;
@@ -55,7 +57,7 @@ public class SimpleCalculator extends SimpleCalculatorBase<SimpleCalculatorBase.
 			}
 
 			@Override
-			public Object reduce(Object oldBranch, Production production) {
+			public Object reduce(Object oldBranch, Production production, Lifeline lifeline) {
 				List<SimpleCalculatorBase.Token> tokens = new ArrayList<>();
 				Object popped = stack.pop(oldBranch, production.rhs.size(), tok -> tokens.add(0, tok));
 				Integer result;
@@ -84,6 +86,10 @@ public class SimpleCalculator extends SimpleCalculatorBase<SimpleCalculatorBase.
 				Object popped = stack.pop(oldBranch, 1, temp::set);
 				return stack.push(popped, concat(emptySymbolsToTokens(emptySymbols), singletonIterator(temp.get())));
 			}
+
+			@Override
+			public void cutLifelines(Predicate<Lifeline> lifelineIsCut) {
+			}
 		};
 		super.beforeMethod();
 	}
@@ -107,7 +113,7 @@ public class SimpleCalculator extends SimpleCalculatorBase<SimpleCalculatorBase.
 			state = state.advance(token, callback);
 		}
 
-		verify(callback).reduce(any(), eq(goalProduction));
+		verify(callback).reduce(any(), eq(goalProduction), any());
 		assertEquals(result.intValue(), 46);
 	}
 

@@ -3,6 +3,7 @@ package org.msyu.parser.glr.grammartest;
 import org.msyu.javautil.cf.NoOp;
 import org.msyu.parser.glr.ASymbol;
 import org.msyu.parser.glr.GlrCallback;
+import org.msyu.parser.glr.Lifeline;
 import org.msyu.parser.glr.Production;
 import org.msyu.parser.glr.ScannerlessState;
 import org.msyu.parser.glr.Terminal;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 import static org.msyu.javautil.cf.Iterators.concat;
 import static org.msyu.javautil.cf.Iterators.singletonIterator;
@@ -71,7 +73,7 @@ public class LoggingCallback implements GlrCallback<Terminal> {
 	}
 
 	@Override
-	public Object reduce(Object oldBranch, Production production) {
+	public Object reduce(Object oldBranch, Production production, Lifeline lifeline) {
 		Object popped = stack.pop(oldBranch, production.rhs.size(), NoOp.consumer());
 		Object pushed = stack.push(popped, singletonIterator(production.lhs));
 		Integer oldIndex = indexByBranch.get(oldBranch);
@@ -94,6 +96,11 @@ public class LoggingCallback implements GlrCallback<Terminal> {
 		Integer newIndex = indexByBranch.computeIfAbsent(newBranch, __ -> ++indexSource);
 		System.out.printf("insert(%s, %s) -> %s %s\n", oldIndex, emptySymbols, newIndex, enumerate(newBranch));
 		return newBranch;
+	}
+
+	@Override
+	public void cutLifelines(Predicate<Lifeline> lifelineIsCut) {
+		System.out.println("cut lifelines");
 	}
 
 }

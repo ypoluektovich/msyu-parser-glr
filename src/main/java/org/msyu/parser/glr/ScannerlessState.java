@@ -9,7 +9,7 @@ import static java.util.Objects.requireNonNull;
 public final class ScannerlessState {
 
 	private final Long position;
-	private final State state;
+	public final State state;
 
 	public static ScannerlessState initializeFrom(Sapling sapling) {
 		return new ScannerlessState(sapling);

@@ -32,7 +32,7 @@ public class SkippableSymbolAtTheEnd extends ReachTheGoalTestBase<Terminal, Logg
 	public void skipped() throws UnexpectedTokenException {
 		state = callback.advance(state, prefix);
 
-		verify(callback).reduce(any(), eq(goalProduction));
+		verify(callback).reduce(any(), eq(goalProduction), any());
 	}
 
 	@Test
@@ -40,7 +40,7 @@ public class SkippableSymbolAtTheEnd extends ReachTheGoalTestBase<Terminal, Logg
 		state = callback.advance(state, prefix);
 		state = callback.advance(state, suffix);
 
-		verify(callback, times(2)).reduce(any(), eq(goalProduction));
+		verify(callback, times(2)).reduce(any(), eq(goalProduction), any());
 	}
 
 }

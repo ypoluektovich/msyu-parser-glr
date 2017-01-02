@@ -38,7 +38,7 @@ public class NonStartBlindReduction extends ReachTheGoalTestBase<Terminal, Loggi
 		state = callback.advance(state, a);
 		state = callback.advance(state, a);
 
-		verify(callback).reduce(any(), eq(goalProduction));
+		verify(callback).reduce(any(), eq(goalProduction), any());
 	}
 
 }

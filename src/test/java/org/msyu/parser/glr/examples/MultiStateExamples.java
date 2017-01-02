@@ -1,6 +1,7 @@
 package org.msyu.parser.glr.examples;
 
 import org.mockito.MockitoAnnotations;
+import org.msyu.parser.glr.Lifeline;
 import org.msyu.parser.glr.Production;
 import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
@@ -11,6 +12,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.Collections;
+import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
@@ -44,6 +46,10 @@ public class MultiStateExamples extends ReachTheGoalTestBase<Terminal, NaiveAstC
 			public Terminal getSymbolOfToken(Terminal token) {
 				return token;
 			}
+
+			@Override
+			public void cutLifelines(Predicate<Lifeline> lifelineIsCut) {
+			}
 		};
 	}
 
@@ -70,7 +76,7 @@ public class MultiStateExamples extends ReachTheGoalTestBase<Terminal, NaiveAstC
 				singleton(3)
 		);
 
-		verify(callback.reductionCallback, times(1)).accept(eq(p_aa_b), any());
+		verify(callback.reductionCallback, times(1)).reduced(eq(p_aa_b), any(), any(), any());
 	}
 
 	@Test
@@ -95,7 +101,7 @@ public class MultiStateExamples extends ReachTheGoalTestBase<Terminal, NaiveAstC
 				singleton(4)
 		);
 
-		verify(callback.reductionCallback, times(1)).accept(eq(p_aa_aa), any());
+		verify(callback.reductionCallback, times(1)).reduced(eq(p_aa_aa), any(), any(), any());
 	}
 
 	@Test(expectedExceptions = UnexpectedTokensException.class)

@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -59,7 +60,7 @@ public final class State {
 	) throws UnexpectedTokensException {
 		this.sapling = previousState.sapling;
 
-		Collection<ItemStack> endStacks = new HashSet<>();
+		Set<ItemStack> endStacksSet = new HashSet<>();
 		List<UnexpectedTokenException> exceptions = new ArrayList<>();
 		Set<GreedMark> marksToCull = new HashSet<>();
 		for (Map.Entry<T, ?> tokenAndStart : startByToken.entrySet()) {
@@ -70,12 +71,12 @@ public final class State {
 				throw new IllegalArgumentException("no stacks registered for position " + start);
 			}
 			try {
-				endStacks.addAll(advance(stacks, token, callback, end, marksToCull));
+				endStacksSet.addAll(advance(stacks, token, callback, end, marksToCull));
 			} catch (UnexpectedTokenException e) {
 				exceptions.add(e);
 			}
 		}
-		if (!exceptions.isEmpty() && endStacks.isEmpty()) {
+		if (!exceptions.isEmpty() && endStacksSet.isEmpty()) {
 			UnexpectedTokensException exception = new UnexpectedTokensException();
 			for (UnexpectedTokenException e : exceptions) {
 				exception.addSuppressed(e);
@@ -83,19 +84,33 @@ public final class State {
 			throw exception;
 		}
 
+		callback.cutLifelines(lifeline -> marksToCull.stream().anyMatch(lifeline::isCulledByMark));
+
 		Map<Object, List<ItemStack>> stacksByPosition = new HashMap<>();
+		Collection<Object> witheredPositions = new HashSet<>();
 		for (Map.Entry<Object, List<ItemStack>> positionAndStacks : previousState.stacksByPosition.entrySet()) {
 			Object position = positionAndStacks.getKey();
-			if (growingPositions.contains(position)) {
-				List<ItemStack> remainingStacks = cull(positionAndStacks.getValue(), marksToCull);
-				if (!remainingStacks.isEmpty()) {
-					stacksByPosition.put(position, remainingStacks);
-				}
+			if (!growingPositions.contains(position)) {
+				continue;
+			}
+			List<ItemStack> remainingStacks = cull(positionAndStacks.getValue(), marksToCull);
+			if (remainingStacks.isEmpty()) {
+				witheredPositions.add(position);
+			} else {
+				stacksByPosition.put(position, remainingStacks);
 			}
 		}
-		endStacks = cull(endStacks, marksToCull);
+		List<ItemStack> endStacks = cull(endStacksSet, marksToCull);
 		if (!endStacks.isEmpty()) {
-			stacksByPosition.put(end, mergeMarks(endStacks));
+			stacksByPosition.put(end, endStacks);
+		}
+
+		for (Map.Entry<Object, List<ItemStack>> posAndStacks : stacksByPosition.entrySet()) {
+			List<ItemStack> stacksAtPosition = posAndStacks.getValue();
+			for (ListIterator<ItemStack> stackIt = stacksAtPosition.listIterator(); stackIt.hasNext(); ) {
+				stackIt.set(stackIt.next().forgetAndMergeMarks(witheredPositions));
+			}
+			posAndStacks.setValue(unmodifiableList(stacksAtPosition));
 		}
 		this.stacksByPosition = Collections.unmodifiableMap(stacksByPosition);
 	}
@@ -156,11 +171,10 @@ public final class State {
 			Production completedProduction = stack.item.production;
 			NonTerminal completedSymbol = completedProduction.lhs;
 
-			Object reducedBranchId = callback.reduce(stack.id, completedProduction);
+			stack = stack.maybeAddGreedMark(marksToCull);
 
-			if (completedProduction.isGreedy) {
-				marksToCull.add(stack.getGreedMark());
-			}
+			Lifeline lifeline = sapling.goals.contains(completedSymbol) ? new Lifeline(stack) : null;
+			Object reducedBranchId = callback.reduce(stack.id, completedProduction, lifeline);
 
 			for (Item newItem : sapling.grammar.getItemsInitializedBy(completedSymbol)) {
 				if (itemIsGoodAsBlindReductionTarget(newItem, nextInStack)) {
@@ -226,19 +240,18 @@ public final class State {
 	private static List<ItemStack> cull(Collection<ItemStack> stacks, Set<GreedMark> marksToCull) {
 		List<ItemStack> remainingStacks = new ArrayList<>();
 		for (ItemStack stack : stacks) {
-			if (Collections.disjoint(stack.greedMarks, marksToCull)) {
+			boolean retain = true;
+			for (GreedMark mark : marksToCull) {
+				if (stack.isCulledByMark(mark)) {
+					retain = false;
+					break;
+				}
+			}
+			if (retain) {
 				remainingStacks.add(stack);
 			}
 		}
-		return unmodifiableList(remainingStacks);
-	}
-
-	private static List<ItemStack> mergeMarks(Collection<ItemStack> stacks) {
-		List<ItemStack> merged = new ArrayList<>();
-		for (ItemStack stack : stacks) {
-			merged.add(stack.mergeMarks());
-		}
-		return unmodifiableList(merged);
+		return remainingStacks;
 	}
 
 

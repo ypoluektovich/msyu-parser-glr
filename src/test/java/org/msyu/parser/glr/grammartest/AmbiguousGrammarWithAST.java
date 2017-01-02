@@ -2,6 +2,7 @@ package org.msyu.parser.glr.grammartest;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockitoAnnotations;
+import org.msyu.parser.glr.Lifeline;
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Terminal;
 import org.msyu.parser.glr.UnexpectedTokenException;
@@ -10,10 +11,12 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -50,6 +53,10 @@ public class AmbiguousGrammarWithAST extends ReachTheGoalTestBase<Terminal, Naiv
 			public Terminal getSymbolOfToken(Terminal token) {
 				return token;
 			}
+
+			@Override
+			public void cutLifelines(Predicate<Lifeline> lifelineIsCut) {
+			}
 		};
 	}
 
@@ -67,7 +74,7 @@ public class AmbiguousGrammarWithAST extends ReachTheGoalTestBase<Terminal, Naiv
 		state = state.advance(suffix, callback);
 
 		ArgumentCaptor<Object> astCaptor = ArgumentCaptor.forClass(Object.class);
-		verify(callback.reductionCallback, times(2)).accept(eq(goalProduction), astCaptor.capture());
+		verify(callback.reductionCallback, times(2)).reduced(eq(goalProduction), astCaptor.capture(), any(), any());
 		assertThat(
 				(List<?>) NoEqualsRef.unwrap(astCaptor.getAllValues()),
 				containsInAnyOrder(
