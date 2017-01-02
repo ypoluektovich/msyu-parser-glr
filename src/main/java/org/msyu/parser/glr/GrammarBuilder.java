@@ -61,6 +61,10 @@ public final class GrammarBuilder extends GrammarFruit {
 		return production;
 	}
 
+	public final Production addProduction(NonTerminal lhs, List<ASymbol> rhs) {
+		return addProduction(lhs, rhs, false);
+	}
+
 	public final Production addProduction(NonTerminal lhs, ASymbol... rhs) {
 		return addProduction(lhs, rhs == null ? null : Arrays.asList(rhs), false);
 	}
