@@ -20,6 +20,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.msyu.parser.glr.Input.singleton;
 
 public class MultiStateExamples extends ReachTheGoalTestBase<Terminal, NaiveAstCallback<Terminal>> {
 
@@ -64,13 +65,13 @@ public class MultiStateExamples extends ReachTheGoalTestBase<Terminal, NaiveAstC
 	public void example1() throws UnexpectedTokensException {
 		State state = State.initializeFrom(sapling, 0);
 		state = state.advance(
-				Collections.singletonMap(aa, 0),
+				singleton(0, aa),
 				callback,
 				2,
 				asList(0, 2)
 		);
 		state = state.advance(
-				Collections.singletonMap(b, 2),
+				singleton(2, b),
 				callback,
 				3,
 				singleton(3)
@@ -83,19 +84,19 @@ public class MultiStateExamples extends ReachTheGoalTestBase<Terminal, NaiveAstC
 	public void dropWithoutAdvance() throws UnexpectedTokensException {
 		State state = State.initializeFrom(sapling, 0);
 		state = state.advance(
-				Collections.singletonMap(aa, 0),
+				singleton(0, aa),
 				callback,
 				2,
 				asList(0, 2)
 		);
 		state = state.advance(
-				Collections.emptyMap(),
+				Collections.emptyList(),
 				callback,
 				3,
 				singleton(2)
 		);
 		state = state.advance(
-				Collections.singletonMap(aa, 2),
+				singleton(2, aa),
 				callback,
 				4,
 				singleton(4)
@@ -108,19 +109,19 @@ public class MultiStateExamples extends ReachTheGoalTestBase<Terminal, NaiveAstC
 	public void exception() throws UnexpectedTokensException {
 		State state = State.initializeFrom(sapling, 0);
 		state = state.advance(
-				Collections.singletonMap(aa, 0),
+				singleton(0, aa),
 				callback,
 				2,
 				asList(0, 2)
 		);
 		state = state.advance(
-				Collections.emptyMap(),
+				Collections.emptyList(),
 				callback,
 				3,
 				singleton(2)
 		);
 		state = state.advance(
-				Collections.singletonMap(aaa, 2),
+				singleton(2, aaa),
 				callback,
 				5,
 				singleton(5)

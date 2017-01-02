@@ -65,8 +65,6 @@ public class UnexpectedToken extends SingleGrammarTestBase {
 			return callback.advance(state, b);
 		} catch (UnexpectedTokenException e) {
 			assertEquals(e.getExpected(), Collections.singleton(a));
-			assertEquals(e.getActual(), b);
-			assertEquals(e.getToken(), b);
 			throw e;
 		}
 	}

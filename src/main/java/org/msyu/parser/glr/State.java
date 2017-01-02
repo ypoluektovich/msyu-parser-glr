@@ -1,7 +1,6 @@
 package org.msyu.parser.glr;
 
 import org.msyu.javautil.cf.CopyList;
-import org.msyu.javautil.cf.CopySet;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -20,6 +19,7 @@ import java.util.stream.Stream;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.stream.Collectors.toList;
 
 public final class State {
@@ -43,17 +43,17 @@ public final class State {
 	}
 
 	public final <T> State advance(
-			Map<T, ?> startByToken,
+			Collection<Input<T>> inputs,
 			GlrCallback<T> callback,
 			Object end,
 			Collection<?> growingPositions
 	) throws UnexpectedTokensException {
-		return new State(this, startByToken, callback, end, growingPositions);
+		return new State(this, inputs, callback, end, growingPositions);
 	}
 
 	private <T> State(
 			State previousState,
-			Map<T, ?> startByToken,
+			Collection<Input<T>> inputs,
 			GlrCallback<T> callback,
 			Object end,
 			Collection<?> growingPositions
@@ -61,27 +61,22 @@ public final class State {
 		this.sapling = previousState.sapling;
 
 		Set<ItemStack> endStacksSet = new HashSet<>();
-		List<UnexpectedTokenException> exceptions = new ArrayList<>();
+		Map<Input<?>, UnexpectedTokenException> exceptionByInput = new HashMap<>();
 		Set<GreedMark> marksToCull = new HashSet<>();
-		for (Map.Entry<T, ?> tokenAndStart : startByToken.entrySet()) {
-			T token = tokenAndStart.getKey();
-			Object start = tokenAndStart.getValue();
-			List<ItemStack> stacks = previousState.stacksByPosition.get(start);
+		for (Input<T> input : inputs) {
+			List<ItemStack> stacks = previousState.stacksByPosition.get(input.startPosition);
 			if (stacks == null) {
-				throw new IllegalArgumentException("no stacks registered for position " + start);
+				exceptionByInput.put(input, new UnexpectedTokenException(emptyList()));
+				continue;
 			}
 			try {
-				endStacksSet.addAll(advance(stacks, token, callback, end, marksToCull));
+				endStacksSet.addAll(advance(stacks, input.token, callback, end, marksToCull));
 			} catch (UnexpectedTokenException e) {
-				exceptions.add(e);
+				exceptionByInput.put(input, e);
 			}
 		}
-		if (!exceptions.isEmpty() && endStacksSet.isEmpty()) {
-			UnexpectedTokensException exception = new UnexpectedTokensException();
-			for (UnexpectedTokenException e : exceptions) {
-				exception.addSuppressed(e);
-			}
-			throw exception;
+		if (!exceptionByInput.isEmpty() && endStacksSet.isEmpty()) {
+			throw new UnexpectedTokensException(unmodifiableMap(exceptionByInput));
 		}
 
 		callback.cutLifelines(lifeline -> marksToCull.stream().anyMatch(lifeline::isCulledByMark));
@@ -147,11 +142,7 @@ public final class State {
 			}
 		}
 		if (shiftedStacks.isEmpty()) {
-			throw new UnexpectedTokenException(
-					CopySet.immutableHash(stacks, stack -> (Terminal) stack.item.getExpectedNextSymbol()),
-					terminal,
-					token
-			);
+			throw new UnexpectedTokenException(stacks);
 		}
 	}
 

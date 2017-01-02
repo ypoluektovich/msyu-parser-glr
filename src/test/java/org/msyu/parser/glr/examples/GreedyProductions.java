@@ -2,6 +2,7 @@ package org.msyu.parser.glr.examples;
 
 import org.msyu.parser.glr.GlrCallback;
 import org.msyu.parser.glr.GrammarBuilder;
+import org.msyu.parser.glr.Input;
 import org.msyu.parser.glr.Lifeline;
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Production;
@@ -20,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
+import static org.msyu.parser.glr.Input.singleton;
 
 public class GreedyProductions {
 
@@ -121,17 +123,17 @@ public class GreedyProductions {
 
 		State state = State.initializeFrom(gb.build().newSapling(G), 0);
 		state = state.advance(
-				Collections.singletonMap(new AtomicReference<>(t), 0),
+				singleton(0, new AtomicReference<>(t)),
 				callback,
 				1,
 				asList(0, 1)
 		);
 		goalByLifeline.clear();
 		state = state.advance(
-				new HashMap<AtomicReference<Terminal>, Object>() {{
-					put(new AtomicReference<>(t), 0);
-					put(new AtomicReference<>(t), 1);
-				}},
+				asList(
+						new Input<>(0, new AtomicReference<>(t)),
+						new Input<>(1, new AtomicReference<>(t))
+				),
 				callback,
 				2,
 				Collections.emptyList()
