@@ -65,13 +65,6 @@ public final class State {
 				exceptions.add(e);
 			}
 		}
-		if (!exceptions.isEmpty() && endStacks.isEmpty()) {
-			UnexpectedTokensException exception = new UnexpectedTokensException();
-			for (UnexpectedTokenException e : exceptions) {
-				exception.addSuppressed(e);
-			}
-			throw exception;
-		}
 
 		Map<Object, List<ItemStack>> stacksByPosition = new HashMap<>();
 		for (Map.Entry<Object, List<ItemStack>> positionAndStacks : previousState.stacksByPosition.entrySet()) {
@@ -82,6 +75,13 @@ public final class State {
 		}
 		if (!endStacks.isEmpty()) {
 			stacksByPosition.put(end, CopyList.immutable(endStacks));
+		}
+		if (!exceptions.isEmpty() && stacksByPosition.isEmpty()) {
+			UnexpectedTokensException exception = new UnexpectedTokensException();
+			for (UnexpectedTokenException e : exceptions) {
+				exception.addSuppressed(e);
+			}
+			throw exception;
 		}
 		this.stacksByPosition = Collections.unmodifiableMap(stacksByPosition);
 	}
@@ -208,5 +208,9 @@ public final class State {
 //				})
 //				.collect(Collectors.toSet());
 //	}
+
+	public final Set<Object> getGrowingPositions() {
+		return stacksByPosition.keySet();
+	}
 
 }
