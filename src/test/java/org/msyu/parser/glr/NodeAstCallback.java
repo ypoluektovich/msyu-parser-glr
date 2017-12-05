@@ -12,7 +12,7 @@ import static org.msyu.javautil.cf.Iterators.singletonIterator;
 
 public abstract class NodeAstCallback<T> implements GlrCallback<T> {
 
-	private final TreeStack<Object> stack = new TreeStack<>();
+	public final TreeStack<Object> stack = new TreeStack<>();
 
 	protected Iterator<Object> emptySymbolsToTokens(List<ASymbol> prependedEmptySymbols) {
 		assert prependedEmptySymbols.isEmpty() : "why are there empty symbols?";

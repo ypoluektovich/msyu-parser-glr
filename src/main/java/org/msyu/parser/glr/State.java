@@ -9,10 +9,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public final class State {
@@ -107,6 +109,26 @@ public final class State {
 		for (ItemStack oldStack : stacks) {
 			if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
 				shiftedStacks.add(oldStack.shift(callback, token));
+			}
+		}
+		Set<Predicate<Object>> cullPredicates = new HashSet<>();
+		for (ItemStack stack : shiftedStacks) {
+			Predicate<Object> predicate = callback.cull(stack.id);
+			if (predicate != null) {
+				cullPredicates.add(predicate);
+			}
+		}
+		for (Iterator<ItemStack> stackItr = shiftedStacks.iterator(); stackItr.hasNext(); ) {
+			ItemStack stack = stackItr.next();
+			boolean cull = false;
+			for (Predicate<Object> predicate : cullPredicates) {
+				if (predicate.test(stack.id)) {
+					cull = true;
+					break;
+				}
+			}
+			if (cull) {
+				stackItr.remove();
 			}
 		}
 		if (shiftedStacks.isEmpty()) {

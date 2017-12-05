@@ -1,6 +1,7 @@
 package org.msyu.parser.glr;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 public interface GlrCallback<T> {
 
@@ -13,5 +14,9 @@ public interface GlrCallback<T> {
 	Object reduce(Object oldBranch, Production production);
 
 	Object insert(Object oldBranch, List<ASymbol> emptySymbols);
+
+	default Predicate<Object> cull(Object branch) {
+		return null;
+	}
 
 }
