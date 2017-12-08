@@ -2,6 +2,7 @@ package org.msyu.parser.glr.examples;
 
 import org.msyu.parser.glr.Grammar;
 import org.msyu.parser.glr.GrammarBuilder;
+import org.msyu.parser.glr.ItemStackView;
 import org.msyu.parser.glr.Node;
 import org.msyu.parser.glr.NodeAstCallback;
 import org.msyu.parser.glr.NonTerminal;
@@ -57,10 +58,11 @@ public class Culling {
 			}
 
 			@Override
-			public Predicate<Object> cull(Object branch) {
+			public Predicate<ItemStackView> cull(ItemStackView stack) {
+				Object branch = stack.getId();
 				Object[] buf = new Object[2];
 				Ref<Integer> count = new Ref<>(0);
-				stack.enumerate(branch, e -> {
+				tree.enumerate(branch, e -> {
 					buf[0] = buf[1];
 					buf[1] = e;
 					count.accept(count.get() + 1);
@@ -74,7 +76,7 @@ public class Culling {
 				Node prev = (Node) buf[0]; // either S_C or S_SC
 				prev = (Node) prev.elements.get(prev.elements.size() - 1); // C_*
 				if (prev.production == C_c) {
-					return b -> b == branch;
+					return s -> s.getId() == branch;
 				}
 				return null;
 			}
@@ -89,7 +91,7 @@ public class Culling {
 		state = state.advance(singletonMap(e, 1), callback, 3, singleton(3));
 		System.out.println("---");
 		for (Object id : state.getUsedStackIds()) {
-			callback.stack.enumerate(id, System.out::print);
+			callback.tree.enumerate(id, System.out::print);
 			System.out.println();
 		}
 	}

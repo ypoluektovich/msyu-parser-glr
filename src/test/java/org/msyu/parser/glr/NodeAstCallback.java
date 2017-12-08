@@ -12,7 +12,7 @@ import static org.msyu.javautil.cf.Iterators.singletonIterator;
 
 public abstract class NodeAstCallback<T> implements GlrCallback<T> {
 
-	public final TreeStack<Object> stack = new TreeStack<>();
+	public final TreeStack<Object> tree = new TreeStack<>();
 
 	protected Iterator<Object> emptySymbolsToTokens(List<ASymbol> prependedEmptySymbols) {
 		assert prependedEmptySymbols.isEmpty() : "why are there empty symbols?";
@@ -23,7 +23,7 @@ public abstract class NodeAstCallback<T> implements GlrCallback<T> {
 
 	@Override
 	public Object shift(Object oldBranch, List<ASymbol> prependedEmptySymbols, T token) {
-		return stack.push(
+		return tree.push(
 				oldBranch,
 				concat(
 						emptySymbolsToTokens(prependedEmptySymbols),
@@ -34,14 +34,14 @@ public abstract class NodeAstCallback<T> implements GlrCallback<T> {
 
 	@Override
 	public Object skip(Object oldBranch, List<ASymbol> emptySymbols) {
-		return stack.push(oldBranch, emptySymbolsToTokens(emptySymbols));
+		return tree.push(oldBranch, emptySymbolsToTokens(emptySymbols));
 	}
 
 	@Override
 	public Object reduce(Object oldBranch, Production production) {
 		List<Object> stuffList = new ArrayList<>();
-		Object popped = stack.pop(oldBranch, production.rhs.size(), thing -> stuffList.add(0, thing));
-		return stack.push(popped, singletonIterator(new Node(production, stuffList)));
+		Object popped = tree.pop(oldBranch, production.rhs.size(), thing -> stuffList.add(0, thing));
+		return tree.push(popped, singletonIterator(new Node(production, stuffList)));
 	}
 
 	@Override
@@ -50,8 +50,8 @@ public abstract class NodeAstCallback<T> implements GlrCallback<T> {
 			return oldBranch;
 		}
 		Ref<Object> temp = new Ref<>();
-		Object popped = stack.pop(oldBranch, 1, temp);
-		return stack.push(popped, concat(emptySymbolsToTokens(emptySymbols), temp.iterator()));
+		Object popped = tree.pop(oldBranch, 1, temp);
+		return tree.push(popped, concat(emptySymbolsToTokens(emptySymbols), temp.iterator()));
 	}
 
 }

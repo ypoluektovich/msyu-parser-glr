@@ -15,7 +15,7 @@ public interface GlrCallback<T> {
 
 	Object insert(Object oldBranch, List<ASymbol> emptySymbols);
 
-	default Predicate<Object> cull(Object branch) {
+	default Predicate<ItemStackView> cull(ItemStackView stack) {
 		return null;
 	}
 

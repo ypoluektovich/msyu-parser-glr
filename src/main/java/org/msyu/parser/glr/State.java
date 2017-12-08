@@ -111,9 +111,9 @@ public final class State {
 				shiftedStacks.add(oldStack.shift(callback, token));
 			}
 		}
-		Set<Predicate<Object>> cullPredicates = new HashSet<>();
+		Set<Predicate<ItemStackView>> cullPredicates = new HashSet<>();
 		for (ItemStack stack : shiftedStacks) {
-			Predicate<Object> predicate = callback.cull(stack.id);
+			Predicate<ItemStackView> predicate = callback.cull(stack);
 			if (predicate != null) {
 				cullPredicates.add(predicate);
 			}
@@ -121,8 +121,8 @@ public final class State {
 		for (Iterator<ItemStack> stackItr = shiftedStacks.iterator(); stackItr.hasNext(); ) {
 			ItemStack stack = stackItr.next();
 			boolean cull = false;
-			for (Predicate<Object> predicate : cullPredicates) {
-				if (predicate.test(stack.id)) {
+			for (Predicate<ItemStackView> predicate : cullPredicates) {
+				if (predicate.test(stack)) {
 					cull = true;
 					break;
 				}
