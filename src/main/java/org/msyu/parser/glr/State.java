@@ -2,6 +2,7 @@ package org.msyu.parser.glr;
 
 import org.msyu.javautil.cf.CopyList;
 import org.msyu.javautil.cf.CopySet;
+import org.msyu.parser.glr.incubator.MapToSet;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -9,12 +10,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public final class State {
@@ -91,10 +93,25 @@ public final class State {
 	private <T> Collection<ItemStack> advance(List<ItemStack> stacks, T token, GlrCallback<T> callback) throws UnexpectedTokenException {
 		Queue<ItemStack> stacksQueue = new ArrayDeque<>();
 		Set<ItemStack> stacksSet = new HashSet<>();
+		MapToSet<ItemStack, ItemStack> ancestorsByStack = new MapToSet<>(new LinkedHashMap<>(), __ -> new HashSet<>());
+		Set<Predicate<ItemStackView>> cullPredicates = new HashSet<>();
+		Set<ItemStack> goalStacks = new HashSet<>();
 
-		shift(stacks, token, callback, stacksQueue);
+		Terminal terminal = callback.getSymbolOfToken(token);
+		Supplier<UnexpectedTokenException> exceptionMaker = () -> new UnexpectedTokenException(
+				CopySet.immutableHash(stacks, stack -> (Terminal) stack.item.getExpectedNextSymbol()),
+				!cullPredicates.isEmpty(),
+				terminal,
+				token
+		);
 
-		reduce(stacksQueue, stacksSet, callback);
+		shift(stacks, terminal, token, callback, stacksQueue, ancestorsByStack, cullPredicates);
+
+		cullAndMaybeThrow(stacksQueue, goalStacks, ancestorsByStack, cullPredicates, exceptionMaker);
+
+		reduce(stacksQueue, stacksSet, goalStacks, callback, ancestorsByStack, cullPredicates);
+
+		cullAndMaybeThrow(stacksSet, goalStacks, ancestorsByStack, cullPredicates, exceptionMaker);
 
 		stacksQueue.addAll(stacksSet);
 		stacksSet.clear();
@@ -102,49 +119,95 @@ public final class State {
 		expand(stacksQueue, stacksSet);
 
 		return stacksSet;
+		// todo: 2017-12-09 do something useful with goalStacks?
 	}
 
-	private <T> void shift(List<ItemStack> stacks, T token, GlrCallback<T> callback, Collection<ItemStack> shiftedStacks) throws UnexpectedTokenException {
-		Terminal terminal = callback.getSymbolOfToken(token);
-		for (ItemStack oldStack : stacks) {
-			if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
-				shiftedStacks.add(oldStack.shift(callback, token));
-			}
+	private void handleNewStack(
+			ItemStack newStack,
+			ItemStack oldStack,
+			Collection<ItemStack> newStackSink,
+			MapToSet<ItemStack, ItemStack> ancestorsByStack,
+			GlrCallback<?> callback,
+			Set<Predicate<ItemStackView>> cullPredicates
+	) {
+		newStackSink.add(newStack);
+		ancestorsByStack.add(newStack, oldStack);
+
+		Predicate<ItemStackView> predicate = callback.cull(newStack);
+		if (predicate != null) {
+			cullPredicates.add(predicate);
 		}
-		Set<Predicate<ItemStackView>> cullPredicates = new HashSet<>();
-		for (ItemStack stack : shiftedStacks) {
-			Predicate<ItemStackView> predicate = callback.cull(stack);
-			if (predicate != null) {
-				cullPredicates.add(predicate);
-			}
-		}
-		for (Iterator<ItemStack> stackItr = shiftedStacks.iterator(); stackItr.hasNext(); ) {
-			ItemStack stack = stackItr.next();
+	}
+
+	private void cullAndMaybeThrow(
+			Collection<ItemStack> unfinishedStacks,
+			Set<ItemStack> goalStacks,
+			MapToSet<ItemStack, ItemStack> ancestorsByStack,
+			Set<Predicate<ItemStackView>> cullPredicates,
+			Supplier<UnexpectedTokenException> exceptionMaker
+	) throws UnexpectedTokenException {
+		Set<ItemStack> culledStacks = new HashSet<>();
+		for (Map.Entry<ItemStack, Set<ItemStack>> ancestorsAndStack : ancestorsByStack.entrySet()) {
+			ItemStack stack = ancestorsAndStack.getKey();
+			Set<ItemStack> ancestors = ancestorsAndStack.getValue();
+
 			boolean cull = false;
-			for (Predicate<ItemStackView> predicate : cullPredicates) {
-				if (predicate.test(stack)) {
-					cull = true;
-					break;
+
+			ancestors.removeAll(culledStacks);
+			if (ancestors.isEmpty()) {
+				cull = true;
+			}
+
+			if (!cull) {
+				for (Predicate<ItemStackView> cullPredicate : cullPredicates) {
+					if (cullPredicate.test(stack)) {
+						cull = true;
+						break;
+					}
 				}
 			}
+
 			if (cull) {
-				stackItr.remove();
+				culledStacks.add(stack);
 			}
 		}
-		if (shiftedStacks.isEmpty()) {
-			throw new UnexpectedTokenException(
-					CopySet.immutableHash(stacks, stack -> (Terminal) stack.item.getExpectedNextSymbol()),
-					terminal,
-					token
-			);
+		unfinishedStacks.removeAll(culledStacks);
+		goalStacks.removeAll(culledStacks);
+		if (unfinishedStacks.isEmpty() && goalStacks.isEmpty()) {
+			throw exceptionMaker.get();
 		}
 	}
 
-	private void reduce(Queue<ItemStack> reductionQueue, Collection<ItemStack> reducedStacks, GlrCallback<?> callback) {
+	private <T> void shift(
+			List<ItemStack> stacks,
+			Terminal terminal,
+			T token,
+			GlrCallback<T> callback,
+			Collection<ItemStack> shiftedStacks,
+			MapToSet<ItemStack, ItemStack> ancestorsByStack,
+			Set<Predicate<ItemStackView>> cullPredicates
+	) {
+		for (ItemStack oldStack : stacks) {
+			if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
+				ItemStack newStack = oldStack.shift(callback, token);
+				handleNewStack(newStack, oldStack, shiftedStacks, ancestorsByStack, callback, cullPredicates);
+			}
+		}
+	}
+
+	private void reduce(
+			Queue<ItemStack> reductionQueue,
+			Collection<ItemStack> reducedStacks,
+			Set<ItemStack> goalStacks,
+			GlrCallback<?> callback,
+			MapToSet<ItemStack, ItemStack> ancestorsByStack,
+			Set<Predicate<ItemStackView>> cullPredicates
+	) {
 		for (ItemStack stack; (stack = reductionQueue.poll()) != null; ) {
 			if (!stack.item.isFinished()) {
 				if (sapling.grammar.isCompletable(stack.item)) {
-					reductionQueue.add(stack.skipToEnd(callback));
+					ItemStack newStack = stack.skipToEnd(callback);
+					handleNewStack(newStack, stack, reductionQueue, ancestorsByStack, callback, cullPredicates);
 				}
 				reducedStacks.add(stack);
 				continue;
@@ -153,16 +216,22 @@ public final class State {
 			Production completedProduction = stack.item.production;
 			NonTerminal completedSymbol = completedProduction.lhs;
 
+			if (nextInStack == null && sapling.goals.contains(completedSymbol)) {
+				goalStacks.add(stack);
+			}
+
 			Object reducedBranchId = callback.reduce(stack.id, completedProduction);
 
 			for (Item newItem : sapling.grammar.getItemsInitializedBy(completedSymbol)) {
 				if (itemIsGoodAsBlindReductionTarget(newItem, nextInStack)) {
-					reductionQueue.add(stack.finishBlindReduction(callback, reducedBranchId, newItem));
+					ItemStack newStack = stack.finishBlindReduction(callback, reducedBranchId, newItem);
+					handleNewStack(newStack, stack, reductionQueue, ancestorsByStack, callback, cullPredicates);
 				}
 			}
 
 			if (nextInStack != null && nextInStack.item.getExpectedNextSymbol().equals(completedSymbol)) {
-				reductionQueue.add(nextInStack.finishGuidedReduction(callback, reducedBranchId));
+				ItemStack newStack = nextInStack.finishGuidedReduction(callback, reducedBranchId);
+				handleNewStack(newStack, stack, reductionQueue, ancestorsByStack, callback, cullPredicates);
 			}
 		}
 	}
