@@ -59,6 +59,9 @@ public class Culling {
 
 			@Override
 			public Predicate<ItemStackView> cull(ItemStackView stack) {
+				if (stack.getFirstFrame().getItem().production != C_c) {
+					return null;
+				}
 				Object branch = stack.getId();
 				Object[] buf = new Object[2];
 				Ref<Integer> count = new Ref<>(0);
@@ -75,10 +78,73 @@ public class Culling {
 				}
 				Node prev = (Node) buf[0]; // either S_C or S_SC
 				prev = (Node) prev.elements.get(prev.elements.size() - 1); // C_*
-				if (prev.production == C_c) {
-					return s -> s.getId() == branch;
+				if (prev.production != C_c) {
+					return null;
 				}
-				return null;
+				return s -> s.getId() == branch;
+			}
+		};
+
+		State state = State.initializeFrom(sapling, 0);
+		state = state.advance(Collections.singletonMap(c, 0), callback, 1, singleton(1));
+		Set<Object> idsAfter1 = state.getUsedStackIds();
+		state = state.advance(Collections.singletonMap(c, 1), callback, 2, asList(1, 2));
+		Set<Object> idsAfter2 = state.getUsedStackIds();
+		assertEquals(idsAfter2, idsAfter1);
+		state = state.advance(singletonMap(e, 1), callback, 3, singleton(3));
+		System.out.println("---");
+		for (Object id : state.getUsedStackIds()) {
+			callback.tree.enumerate(id, System.out::print);
+			System.out.println();
+		}
+	}
+
+	/**
+	 * No two 'c' tokens are allowed in a row.
+	 * This version checks the condition after a S_SC reduction.
+	 *
+	 * The code is not too much different, but you can spot places in cull() that have become more uniform.
+	 * Perhaps with some effort spent on "syntactic sugar", it could become much more readable.
+	 */
+	@Test
+	public void noSequentialCs_checkAfterReduction() throws UnexpectedTokensException {
+		NodeAstCallback<Terminal> callback = new NodeAstCallback<Terminal>() {
+			@Override
+			public Terminal getSymbolOfToken(Terminal token) {
+				return token;
+			}
+
+			@Override
+			protected Object getStackableToken(Terminal token) {
+				return token;
+			}
+
+			@Override
+			public Predicate<ItemStackView> cull(ItemStackView stack) {
+				if (stack.getFirstFrame().getItem().production != S_SC) {
+					return null;
+				}
+				Object branch = stack.getId();
+				Object[] buf = new Object[2];
+				Ref<Integer> count = new Ref<>(0);
+				tree.enumerate(branch, e -> {
+					buf[0] = buf[1];
+					buf[1] = e;
+					count.accept(count.get() + 1);
+				});
+				if (count.get() < 2) {
+					return null;
+				}
+				Node curr = (Node) buf[1];
+				if (curr.production != C_c) {
+					return null;
+				}
+				Node prev = (Node) buf[0]; // either S_C or S_SC
+				prev = (Node) prev.elements.get(prev.elements.size() - 1); // C_*
+				if (prev.production != C_c) {
+					return null;
+				}
+				return s -> s.getId() == branch;
 			}
 		};
 
