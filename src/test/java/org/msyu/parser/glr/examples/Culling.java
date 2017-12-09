@@ -7,7 +7,6 @@ import org.msyu.parser.glr.Node;
 import org.msyu.parser.glr.NodeAstCallback;
 import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Production;
-import org.msyu.parser.glr.Ref;
 import org.msyu.parser.glr.Sapling;
 import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
@@ -15,6 +14,7 @@ import org.msyu.parser.glr.UnexpectedTokensException;
 import org.testng.annotations.Test;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -63,20 +63,14 @@ public class Culling {
 					return null;
 				}
 				Object branch = stack.getId();
-				Object[] buf = new Object[2];
-				Ref<Integer> count = new Ref<>(0);
-				tree.enumerate(branch, e -> {
-					buf[0] = buf[1];
-					buf[1] = e;
-					count.accept(count.get() + 1);
-				});
-				if (count.get() < 2) {
+				List<Object> buf = tree.getLastElements(branch, 2);
+				if (buf.size() < 2) {
 					return null;
 				}
-				if (buf[1] != c) {
+				if (buf.get(1) != c) {
 					return null;
 				}
-				Node prev = (Node) buf[0]; // either S_C or S_SC
+				Node prev = (Node) buf.get(0); // either S_C or S_SC
 				prev = (Node) prev.elements.get(prev.elements.size() - 1); // C_*
 				if (prev.production != C_c) {
 					return null;
@@ -125,21 +119,15 @@ public class Culling {
 					return null;
 				}
 				Object branch = stack.getId();
-				Object[] buf = new Object[2];
-				Ref<Integer> count = new Ref<>(0);
-				tree.enumerate(branch, e -> {
-					buf[0] = buf[1];
-					buf[1] = e;
-					count.accept(count.get() + 1);
-				});
-				if (count.get() < 2) {
+				List<Object> buf = tree.getLastElements(branch, 2);
+				if (buf.size() < 2) {
 					return null;
 				}
-				Node curr = (Node) buf[1];
+				Node curr = (Node) buf.get(1);
 				if (curr.production != C_c) {
 					return null;
 				}
-				Node prev = (Node) buf[0]; // either S_C or S_SC
+				Node prev = (Node) buf.get(0); // either S_C or S_SC
 				prev = (Node) prev.elements.get(prev.elements.size() - 1); // C_*
 				if (prev.production != C_c) {
 					return null;
