@@ -1,7 +1,6 @@
 package org.msyu.parser.glr;
 
 import java.util.List;
-import java.util.function.Predicate;
 
 public interface GlrCallback<T> {
 
@@ -15,7 +14,7 @@ public interface GlrCallback<T> {
 
 	Object insert(Object oldBranch, List<ASymbol> emptySymbols);
 
-	default Predicate<ItemStackView> cull(ItemStackView stack) {
+	default CullPredicate cull(ItemStackView stack) {
 		return null;
 	}
 

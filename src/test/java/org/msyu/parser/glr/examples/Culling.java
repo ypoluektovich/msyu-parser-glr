@@ -1,5 +1,6 @@
 package org.msyu.parser.glr.examples;
 
+import org.msyu.parser.glr.CullPredicate;
 import org.msyu.parser.glr.Grammar;
 import org.msyu.parser.glr.GrammarBuilder;
 import org.msyu.parser.glr.ItemStackView;
@@ -16,7 +17,6 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 import java.util.Set;
-import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
@@ -58,7 +58,7 @@ public class Culling {
 			}
 
 			@Override
-			public Predicate<ItemStackView> cull(ItemStackView stack) {
+			public CullPredicate cull(ItemStackView stack) {
 				if (stack.getFirstFrame().getItem().production != C_c) {
 					return null;
 				}
@@ -132,7 +132,7 @@ public class Culling {
 			}
 
 			@Override
-			public Predicate<ItemStackView> cull(ItemStackView stack) {
+			public CullPredicate cull(ItemStackView stack) {
 				if (stack.getFirstFrame().getItem().production != S_SC) {
 					return null;
 				}

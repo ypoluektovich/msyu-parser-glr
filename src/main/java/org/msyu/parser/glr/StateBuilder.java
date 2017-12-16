@@ -5,6 +5,7 @@ import org.msyu.javautil.cf.CopySet;
 import org.msyu.parser.glr.incubator.MapToSet;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,9 +14,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Collections.unmodifiableSet;
 
@@ -27,6 +28,7 @@ public final class StateBuilder {
 
 	private final Set<ItemStack> endStacks = new HashSet<>();
 	private final Set<ItemStack> goalStacks = new HashSet<>();
+	private final Set<ExtendedCullPredicate> cullPredicates = new HashSet<>();
 
 	StateBuilder(
 			Sapling sapling,
@@ -48,8 +50,8 @@ public final class StateBuilder {
 		Queue<ItemStack> stacksQueue = new ArrayDeque<>();
 		Set<ItemStack> stacksSet = new HashSet<>();
 		MapToSet<ItemStack, ItemStack> ancestorsByStack = new MapToSet<>(new LinkedHashMap<>(), __ -> new HashSet<>());
-		Set<Predicate<ItemStackView>> cullPredicates = new HashSet<>();
-		// we need a set for the current advance so that unexpected token detector works properly
+		// we need these sets for the current advance so that unexpected token detector works properly
+		Set<CullPredicate> cullPredicates = new HashSet<>();
 		Set<ItemStack> goalStacks = new HashSet<>();
 
 		Terminal terminal = callback.getSymbolOfToken(token);
@@ -75,6 +77,11 @@ public final class StateBuilder {
 
 		endStacks.addAll(stacksSet);
 		this.goalStacks.addAll(goalStacks);
+		for (CullPredicate cullPredicate : cullPredicates) {
+			if (cullPredicate instanceof ExtendedCullPredicate) {
+				this.cullPredicates.add((ExtendedCullPredicate) cullPredicate);
+			}
+		}
 	}
 
 	private void handleNewStack(
@@ -83,12 +90,12 @@ public final class StateBuilder {
 			Collection<ItemStack> newStackSink,
 			MapToSet<ItemStack, ItemStack> ancestorsByStack,
 			GlrCallback<?> callback,
-			Set<Predicate<ItemStackView>> cullPredicates
+			Set<CullPredicate> cullPredicates
 	) {
 		newStackSink.add(newStack);
 		ancestorsByStack.add(newStack, oldStack);
 
-		Predicate<ItemStackView> predicate = callback.cull(newStack);
+		CullPredicate predicate = callback.cull(newStack);
 		if (predicate != null) {
 			cullPredicates.add(predicate);
 		}
@@ -98,7 +105,7 @@ public final class StateBuilder {
 			Collection<ItemStack> unfinishedStacks,
 			Set<ItemStack> goalStacks,
 			MapToSet<ItemStack, ItemStack> ancestorsByStack,
-			Set<Predicate<ItemStackView>> cullPredicates,
+			Set<CullPredicate> cullPredicates,
 			Supplier<UnexpectedTokenException> exceptionMaker
 	) throws UnexpectedTokenException {
 		Set<ItemStack> culledStacks = new HashSet<>();
@@ -114,8 +121,8 @@ public final class StateBuilder {
 			}
 
 			if (!cull) {
-				for (Predicate<ItemStackView> cullPredicate : cullPredicates) {
-					if (cullPredicate.test(stack)) {
+				for (CullPredicate cullPredicate : cullPredicates) {
+					if (cullPredicate.cull(stack)) {
 						cull = true;
 						break;
 					}
@@ -140,7 +147,7 @@ public final class StateBuilder {
 			GlrCallback<T> callback,
 			Collection<ItemStack> shiftedStacks,
 			MapToSet<ItemStack, ItemStack> ancestorsByStack,
-			Set<Predicate<ItemStackView>> cullPredicates
+			Set<CullPredicate> cullPredicates
 	) {
 		for (ItemStack oldStack : stacks) {
 			if (oldStack.item.getExpectedNextSymbol().equals(terminal)) {
@@ -156,7 +163,7 @@ public final class StateBuilder {
 			Set<ItemStack> goalStacks,
 			GlrCallback<?> callback,
 			MapToSet<ItemStack, ItemStack> ancestorsByStack,
-			Set<Predicate<ItemStackView>> cullPredicates
+			Set<CullPredicate> cullPredicates
 	) {
 		for (ItemStack stack; (stack = reductionQueue.poll()) != null; ) {
 			if (!stack.item.isFinished()) {
@@ -237,10 +244,23 @@ public final class StateBuilder {
 		Map<Object, List<ItemStack>> stacksByPosition = new HashMap<>();
 		for (Map.Entry<Object, List<ItemStack>> positionAndStacks : oldStacksByPosition.entrySet()) {
 			Object position = positionAndStacks.getKey();
-			if (growingPositions.contains(position)) {
-				stacksByPosition.put(position, positionAndStacks.getValue());
+			if (!growingPositions.contains(position)) {
+				continue;
 			}
+			List<ItemStack> stacks = positionAndStacks.getValue();
+			if (!cullPredicates.isEmpty()) {
+				stacks = new ArrayList<>(stacks);
+				if (stacks.removeIf(this::combinedCullPredicate)) {
+					stacks = unmodifiableList(stacks);
+				} else {
+					stacks = positionAndStacks.getValue();
+				}
+			}
+			stacksByPosition.put(position, stacks);
 		}
+
+		endStacks.removeIf(this::combinedCullPredicate);
+		goalStacks.removeIf(this::combinedCullPredicate);
 		if (!endStacks.isEmpty() && growingPositions.contains(end)) {
 			stacksByPosition.put(end, CopyList.immutable(endStacks));
 		}
@@ -248,6 +268,18 @@ public final class StateBuilder {
 			throw new IllegalStateException("no goals reached or stacks remaining");
 		}
 		return new State(sapling, unmodifiableMap(stacksByPosition));
+	}
+
+	private boolean combinedCullPredicate(ItemStack stack) {
+		if (cullPredicates.isEmpty()) {
+			return false;
+		}
+		for (ExtendedCullPredicate cullPredicate : cullPredicates) {
+			if (cullPredicate.cull(stack)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 
