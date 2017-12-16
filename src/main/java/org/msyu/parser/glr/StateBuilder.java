@@ -17,6 +17,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static java.util.Collections.unmodifiableMap;
+import static java.util.Collections.unmodifiableSet;
 
 public final class StateBuilder {
 
@@ -38,7 +39,7 @@ public final class StateBuilder {
 	}
 
 
-	public <T> void advance(Object start, T token, GlrCallback<T> callback) throws UnexpectedTokenException {
+	public final <T> void advance(Object start, T token, GlrCallback<T> callback) throws UnexpectedTokenException {
 		List<ItemStack> startStacks = oldStacksByPosition.get(start);
 		if (startStacks == null) {
 			throw new IllegalArgumentException("no stacks registered for position " + start);
@@ -232,7 +233,7 @@ public final class StateBuilder {
 	}
 
 
-	public State finish(Collection<?> growingPositions) {
+	public final State finish(Collection<?> growingPositions) {
 		Map<Object, List<ItemStack>> stacksByPosition = new HashMap<>();
 		for (Map.Entry<Object, List<ItemStack>> positionAndStacks : oldStacksByPosition.entrySet()) {
 			Object position = positionAndStacks.getKey();
@@ -240,13 +241,18 @@ public final class StateBuilder {
 				stacksByPosition.put(position, positionAndStacks.getValue());
 			}
 		}
-		if (!endStacks.isEmpty()) {
+		if (!endStacks.isEmpty() && growingPositions.contains(end)) {
 			stacksByPosition.put(end, CopyList.immutable(endStacks));
 		}
 		if (endStacks.isEmpty() && goalStacks.isEmpty() && stacksByPosition.isEmpty()) {
 			throw new IllegalStateException("no goals reached or stacks remaining");
 		}
 		return new State(sapling, unmodifiableMap(stacksByPosition));
+	}
+
+
+	public final Collection<ItemStackView> viewGoalStacks() {
+		return unmodifiableSet(goalStacks);
 	}
 
 }
