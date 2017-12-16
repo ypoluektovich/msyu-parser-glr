@@ -9,19 +9,19 @@ import org.msyu.parser.glr.NonTerminal;
 import org.msyu.parser.glr.Production;
 import org.msyu.parser.glr.Sapling;
 import org.msyu.parser.glr.State;
+import org.msyu.parser.glr.StateBuilder;
 import org.msyu.parser.glr.Terminal;
-import org.msyu.parser.glr.UnexpectedTokensException;
+import org.msyu.parser.glr.UnexpectedTokenException;
 import org.testng.annotations.Test;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
-import static java.util.Collections.singletonMap;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.fail;
 
 /**
  * These tests are inspired by the same problem: parsing a string with escape sequences in it.
@@ -45,7 +45,7 @@ public class Culling {
 	 * This version checks the condition immediately after a shift.
 	 */
 	@Test
-	public void noSequentialCs_checkAfterShift() throws UnexpectedTokensException {
+	public void noSequentialCs_checkAfterShift() throws UnexpectedTokenException {
 		NodeAstCallback<Terminal> callback = new NodeAstCallback<Terminal>() {
 			@Override
 			public Terminal getSymbolOfToken(Terminal token) {
@@ -80,12 +80,30 @@ public class Culling {
 		};
 
 		State state = State.initializeFrom(sapling, 0);
-		state = state.advance(Collections.singletonMap(c, 0), callback, 1, singleton(1));
+		StateBuilder sb;
+
+		sb = state.startAdvance(1);
+		sb.advance(0, c, callback);
+		state = sb.finish(singleton(1));
+
 		Set<Object> idsAfter1 = state.getUsedStackIds();
-		state = state.advance(Collections.singletonMap(c, 1), callback, 2, asList(1, 2));
+
+		sb = state.startAdvance(2);
+		try {
+			sb.advance(1, c, callback);
+			fail("should have thrown");
+		} catch (UnexpectedTokenException e1) {
+			// ignore
+		}
+		state = sb.finish(asList(1, 2));
+
 		Set<Object> idsAfter2 = state.getUsedStackIds();
 		assertEquals(idsAfter2, idsAfter1);
-		state = state.advance(singletonMap(e, 1), callback, 3, singleton(3));
+
+		sb = state.startAdvance(3);
+		sb.advance(1, e, callback);
+		state = sb.finish(singleton(3));
+
 		System.out.println("---");
 		for (Object id : state.getUsedStackIds()) {
 			callback.tree.enumerate(id, System.out::print);
@@ -101,7 +119,7 @@ public class Culling {
 	 * Perhaps with some effort spent on "syntactic sugar", it could become much more readable.
 	 */
 	@Test
-	public void noSequentialCs_checkAfterReduction() throws UnexpectedTokensException {
+	public void noSequentialCs_checkAfterReduction() throws UnexpectedTokenException {
 		NodeAstCallback<Terminal> callback = new NodeAstCallback<Terminal>() {
 			@Override
 			public Terminal getSymbolOfToken(Terminal token) {
@@ -137,12 +155,30 @@ public class Culling {
 		};
 
 		State state = State.initializeFrom(sapling, 0);
-		state = state.advance(Collections.singletonMap(c, 0), callback, 1, singleton(1));
+		StateBuilder sb;
+
+		sb = state.startAdvance(1);
+		sb.advance(0, c, callback);
+		state = sb.finish(singleton(1));
+
 		Set<Object> idsAfter1 = state.getUsedStackIds();
-		state = state.advance(Collections.singletonMap(c, 1), callback, 2, asList(1, 2));
+
+		sb = state.startAdvance(2);
+		try {
+			sb.advance(1, c, callback);
+			fail("should have thrown");
+		} catch (UnexpectedTokenException e1) {
+			// ignore
+		}
+		state = sb.finish(asList(1, 2));
+
 		Set<Object> idsAfter2 = state.getUsedStackIds();
 		assertEquals(idsAfter2, idsAfter1);
-		state = state.advance(singletonMap(e, 1), callback, 3, singleton(3));
+
+		sb = state.startAdvance(3);
+		sb.advance(1, e, callback);
+		state = sb.finish(singleton(3));
+
 		System.out.println("---");
 		for (Object id : state.getUsedStackIds()) {
 			callback.tree.enumerate(id, System.out::print);
