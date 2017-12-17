@@ -2,7 +2,7 @@ package org.msyu.parser.glr;
 
 import org.msyu.javautil.cf.CopyList;
 import org.msyu.javautil.cf.CopySet;
-import org.msyu.parser.glr.incubator.MapToSet;
+import org.msyu.javautil.cf.MapToSet;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

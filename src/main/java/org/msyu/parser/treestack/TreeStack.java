@@ -1,8 +1,6 @@
 package org.msyu.parser.treestack;
 
 import org.msyu.javautil.cf.Iterators;
-import org.msyu.parser.glr.incubator.CutoffIterator;
-import org.msyu.parser.glr.incubator.ReverseListIterator;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -209,14 +207,14 @@ public final class TreeStack<E> {
 		List<Branch<E>> branches = collectBranches(id);
 		return Iterators.concat(
 				branches.stream()
-						.map(b -> new ReverseListIterator<>(b.elements))
+						.map(b -> Iterators.reverseListIterator(b.elements))
 						.collect(Collectors.toList())
 		);
 	}
 
 	public final List<E> getLastElements(Object id, int count) {
 		List<E> buf = new ArrayList<>(count);
-		for (Iterator<E> itr = new CutoffIterator<>(reverseIterator(id), count); itr.hasNext(); ) {
+		for (Iterator<E> itr = Iterators.cutoff(reverseIterator(id), count); itr.hasNext(); ) {
 			buf.add(0, itr.next());
 		}
 		return buf;
