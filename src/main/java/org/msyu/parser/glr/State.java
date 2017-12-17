@@ -68,10 +68,20 @@ public final class State {
 		}
 	}
 
-	// TODO: 2016-12-11 reimplement
-//	public final List<? extends ItemStackView> getStacks() {
-//		return stacks;
-//	}
+	public final Collection<ItemStackView> getStacks() {
+		return stacksByPosition.values().stream()
+				.flatMap(Collection::stream)
+				.collect(Collectors.toList());
+	}
+
+	public final Collection<ItemStackView> getStacksAtPosition(Object position) {
+		// We know that the list is unmodifiable, so this is okay.
+		// It'd work without a cast if we were returning Collection<? extends ItemStackView>,
+		// but that's just ugly.
+		@SuppressWarnings("unchecked")
+		Collection<ItemStackView> stacks = (List) stacksByPosition.get(position);
+		return stacks;
+	}
 
 	public final Set<Object> getUsedStackIds() {
 		return stacksByPosition.values().stream()
@@ -80,16 +90,16 @@ public final class State {
 				.collect(Collectors.toSet());
 	}
 
-	// TODO: 2016-12-11 reimplement
-//	public final Set<Terminal> getExpectedNextSymbols() {
-//		return stacks.stream()
-//				.map(stack -> {
-//					ASymbol expectedNextSymbol = stack.item.getExpectedNextSymbol();
-//					assert expectedNextSymbol instanceof Terminal : "expected next symbol is not a Terminal";
-//					return (Terminal) expectedNextSymbol;
-//				})
-//				.collect(Collectors.toSet());
-//	}
+	public final Set<Terminal> getExpectedNextSymbols() {
+		return stacksByPosition.values().stream()
+				.flatMap(Collection::stream)
+				.map(stack -> {
+					ASymbol expectedNextSymbol = stack.item.getExpectedNextSymbol();
+					assert expectedNextSymbol instanceof Terminal : "expected next symbol is not a Terminal";
+					return (Terminal) expectedNextSymbol;
+				})
+				.collect(Collectors.toSet());
+	}
 
 	public final Set<Object> getGrowingPositions() {
 		return stacksByPosition.keySet();
