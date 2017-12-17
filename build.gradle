@@ -1,12 +1,12 @@
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'com.jfrog.bintray' version '1.7.2'
+    id 'com.jfrog.bintray' version '1.8.0'
 }
 
 group 'org.msyu.parser'
 ext.pkgname = 'glr'
-version '0.1.4'
+version '0.2.0'
 
 sourceCompatibility = 1.8
 
@@ -16,11 +16,11 @@ repositories {
 }
 
 dependencies {
-    compile 'org.msyu.javautil:cf:0.1.+'
+    compile 'org.msyu.javautil:cf:[0.1.1,0.2.0)'
 
-    testCompile 'org.testng:testng:6.9.+'
-    testCompile 'org.hamcrest:java-hamcrest:2.0.+'
-    testCompile('org.mockito:mockito-core:1.10.+') {
+    testCompile 'org.testng:testng:6.+'
+    testCompile 'org.hamcrest:java-hamcrest:2.+'
+    testCompile('org.mockito:mockito-core:1.+') {
         exclude group: 'org.hamcrest', module: 'hamcrest-core'
     }
 }

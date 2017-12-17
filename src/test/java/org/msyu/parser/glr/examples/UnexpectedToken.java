@@ -2,8 +2,8 @@ package org.msyu.parser.glr.examples;
 
 import org.msyu.parser.glr.GrammarBuilder;
 import org.msyu.parser.glr.NonTerminal;
+import org.msyu.parser.glr.ScannerlessState;
 import org.msyu.parser.glr.SingleGrammarTestBase;
-import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
 import org.msyu.parser.glr.UnexpectedTokenException;
 import org.msyu.parser.glr.grammartest.LoggingCallback;
@@ -12,6 +12,7 @@ import org.testng.annotations.Test;
 import java.util.Collections;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.fail;
 
 public class UnexpectedToken extends SingleGrammarTestBase {
@@ -21,7 +22,6 @@ public class UnexpectedToken extends SingleGrammarTestBase {
 
 	NonTerminal A;
 	NonTerminal B;
-	NonTerminal X;
 
 	LoggingCallback callback;
 
@@ -43,21 +43,14 @@ public class UnexpectedToken extends SingleGrammarTestBase {
 
 	@Test(expectedExceptions = UnexpectedTokenException.class)
 	public void start() throws UnexpectedTokenException {
-		State state = State.initializeFrom(grammar.newSapling(A));
+		ScannerlessState state = ScannerlessState.initializeFrom(grammar.newSapling(A));
 
-		try {
-			state = callback.advance(state, b);
-		} catch (UnexpectedTokenException e) {
-			assertEquals(e.getExpected(), Collections.singleton(a));
-			assertEquals(e.getActual(), b);
-			assertEquals(e.getToken(), b);
-			throw e;
-		}
+		state = advanceAndExpectFailure(state);
 	}
 
 	@Test(expectedExceptions = UnexpectedTokenException.class)
 	public void middle() throws UnexpectedTokenException {
-		State state = State.initializeFrom(grammar.newSapling(A, B));
+		ScannerlessState state = ScannerlessState.initializeFrom(grammar.newSapling(A, B));
 
 		try {
 			state = callback.advance(state, a);
@@ -65,10 +58,15 @@ public class UnexpectedToken extends SingleGrammarTestBase {
 			fail("should not have died here", e);
 			throw e;
 		}
+		state = advanceAndExpectFailure(state);
+	}
+
+	private ScannerlessState advanceAndExpectFailure(ScannerlessState state) throws UnexpectedTokenException {
 		try {
-			state = callback.advance(state, b);
+			return callback.advance(state, b);
 		} catch (UnexpectedTokenException e) {
 			assertEquals(e.getExpected(), Collections.singleton(a));
+			assertFalse(e.isExpectedWithRestrictions());
 			assertEquals(e.getActual(), b);
 			assertEquals(e.getToken(), b);
 			throw e;

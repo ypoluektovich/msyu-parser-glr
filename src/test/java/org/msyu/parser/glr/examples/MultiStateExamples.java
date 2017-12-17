@@ -1,8 +1,8 @@
 package org.msyu.parser.glr.examples;
 
 import org.mockito.MockitoAnnotations;
-import org.msyu.parser.glr.MultiState;
 import org.msyu.parser.glr.Production;
+import org.msyu.parser.glr.State;
 import org.msyu.parser.glr.Terminal;
 import org.msyu.parser.glr.UnexpectedTokensException;
 import org.msyu.parser.glr.grammartest.NoEqualsRef;
@@ -56,7 +56,7 @@ public class MultiStateExamples extends ReachTheGoalTestBase<Terminal, NaiveAstC
 
 	@Test
 	public void example1() throws UnexpectedTokensException {
-		MultiState state = MultiState.initializeFrom(sapling, 0);
+		State state = State.initializeFrom(sapling, 0);
 		state = state.advance(
 				Collections.singletonMap(aa, 0),
 				callback,
@@ -75,7 +75,7 @@ public class MultiStateExamples extends ReachTheGoalTestBase<Terminal, NaiveAstC
 
 	@Test
 	public void dropWithoutAdvance() throws UnexpectedTokensException {
-		MultiState state = MultiState.initializeFrom(sapling, 0);
+		State state = State.initializeFrom(sapling, 0);
 		state = state.advance(
 				Collections.singletonMap(aa, 0),
 				callback,
@@ -100,7 +100,7 @@ public class MultiStateExamples extends ReachTheGoalTestBase<Terminal, NaiveAstC
 
 	@Test(expectedExceptions = UnexpectedTokensException.class)
 	public void exception() throws UnexpectedTokensException {
-		MultiState state = MultiState.initializeFrom(sapling, 0);
+		State state = State.initializeFrom(sapling, 0);
 		state = state.advance(
 				Collections.singletonMap(aa, 0),
 				callback,

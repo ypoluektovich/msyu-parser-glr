@@ -14,4 +14,8 @@ public interface GlrCallback<T> {
 
 	Object insert(Object oldBranch, List<ASymbol> emptySymbols);
 
+	default CullPredicate cull(ItemStackView stack) {
+		return null;
+	}
+
 }

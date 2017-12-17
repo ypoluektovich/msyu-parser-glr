@@ -1,14 +1,19 @@
 package org.msyu.parser.treestack;
 
+import org.msyu.javautil.cf.Iterators;
+
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Deque;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public final class TreeStack<E> {
 
@@ -156,25 +161,63 @@ public final class TreeStack<E> {
 		}
 	}
 
+	/**
+	 * @return a deque of branches, ordered from leaf to root
+	 */
+	private List<Branch<E>> collectBranches(Object id) {
+		Branch<E> branch = branchById.get(id);
+		if (branch == null) {
+			throw new IllegalArgumentException("branch does not exist");
+		}
+		List<Branch<E>> branches = new ArrayList<>();
+		do {
+			branches.add(branch);
+			branch = branch.parent;
+		} while (branch != null);
+		return branches;
+	}
+
 	public final void enumerate(Object id, Consumer<E> sink) {
 		Objects.requireNonNull(sink, "asked to enumerate into null sink");
 		if (id == null) {
 			return;
 		}
-		Branch<E> branch = branchById.get(id);
-		if (branch == null) {
-			throw new IllegalArgumentException("asked to enumerate nonexistent branch");
-		}
-		Deque<Branch<E>> branches = new ArrayDeque<>();
-		while (branch != null) {
-			branches.addLast(branch);
-			branch = branch.parent;
-		}
-		while ((branch = branches.pollLast()) != null) {
+		List<Branch<E>> branches = collectBranches(id);
+		Collections.reverse(branches);
+		for (Branch<E> branch : branches) {
 			for (E element : branch.elements) {
 				sink.accept(element);
 			}
 		}
+	}
+
+	public final Iterator<E> iterator(Object id) {
+		if (id == null) {
+			return Collections.emptyIterator();
+		}
+		List<Branch<E>> branches = collectBranches(id);
+		Collections.reverse(branches);
+		return Iterators.concat(branches.stream().map(b -> b.elements.iterator()).collect(Collectors.toList()));
+	}
+
+	public final Iterator<E> reverseIterator(Object id) {
+		if (id == null) {
+			return Collections.emptyIterator();
+		}
+		List<Branch<E>> branches = collectBranches(id);
+		return Iterators.concat(
+				branches.stream()
+						.map(b -> Iterators.reverseListIterator(b.elements))
+						.collect(Collectors.toList())
+		);
+	}
+
+	public final List<E> getLastElements(Object id, int count) {
+		List<E> buf = new ArrayList<>(count);
+		for (Iterator<E> itr = Iterators.cutoff(reverseIterator(id), count); itr.hasNext(); ) {
+			buf.add(0, itr.next());
+		}
+		return buf;
 	}
 
 }
